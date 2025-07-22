@@ -2230,6 +2230,13 @@
                 </div>
 
                 <div class="filter-group">
+                    <label for="year-filter">Year</label>
+                    <select id="year-filter" class="filter-select">
+                        <option value="all">All Years</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
                     <label for="country-filter">Country</label>
                     <select id="country-filter" class="filter-select">
                         <option value="all">All Countries</option>
@@ -2277,7 +2284,7 @@
                 </button>
 
                 <div class="player-container">
-                    <video id="player" playsinline controls>
+                    <video id="player" playsinline controls crossorigin="anonymous">
                         <!-- Source will be set dynamically -->
                     </video>
                     <div id="player-message-area" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; padding: 20px; background-color: var(--youtube-gray); border-radius: var(--radius);"></div>
@@ -2433,6 +2440,7 @@
             contentList: document.getElementById('content-list'),
             genreFilter: document.getElementById('genre-filter'),
             countryFilter: document.getElementById('country-filter'),
+            yearFilter: document.getElementById('year-filter'),
             sortFilter: document.getElementById('sort-filter'),
             viewerPage: document.getElementById('viewer-page'),
             viewerTitle: document.getElementById('viewer-title'),
@@ -2602,10 +2610,12 @@
             try {
                 elements.loadingSpinner.style.display = 'block';
 
-                const response = await fetch("https://raw.githubusercontent.com/MovieAddict88/Movie-Source/main/enriched_playlist.json"); // Changed to local file
+                const response = await fetch("https://raw.githubusercontent.com/MovieAddict88/Movie-Source/main/data.json"); // Changed to local file
                 if (!response.ok) throw new Error("Online source failed");
 
-                cineData = await response.json();
+                const base64Data = await response.text();
+                const decodedData = decodeURIComponent(escape(atob(base64Data)));
+                cineData = JSON.parse(decodedData);
                 console.log("✅ Loaded from LOCAL source");
 
             } catch (err) {
@@ -2788,6 +2798,25 @@
                 option.textContent = country;
                 countryFilter.appendChild(option);
             });
+
+            // Populate year filter
+            const yearFilter = elements.yearFilter;
+            const years = new Set();
+            cineData.Categories.forEach(category => {
+                category.Entries.forEach(entry => {
+                    if (entry.Year) {
+                        years.add(entry.Year);
+                    }
+                });
+            });
+
+            const sortedYears = Array.from(years).sort((a, b) => b - a);
+            sortedYears.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearFilter.appendChild(option);
+            });
         }
         
         // Render content based on filters
@@ -2801,6 +2830,7 @@
             // Get selected category
             const genre = elements.genreFilter.value.toLowerCase();
             const country = elements.countryFilter.value.toLowerCase();
+            const year = elements.yearFilter.value;
             const sortBy = elements.sortFilter.value;
 
             // Filter content
@@ -2812,8 +2842,9 @@
                             (entry.SubCategory && entry.SubCategory.toLowerCase().includes(genre));
                         const countryMatch = country === 'all' ||
                             (entry.Country && entry.Country.toLowerCase().includes(country));
+                        const yearMatch = year === 'all' || (entry.Year && entry.Year.toString() === year);
 
-                        if (genreMatch && countryMatch) {
+                        if (genreMatch && countryMatch && yearMatch) {
                             currentContent.push({
                                 ...entry,
                                 type: cat.MainCategory.toLowerCase().includes('movie') ? 'movie' :
@@ -3346,7 +3377,27 @@
             }
             // Check for MPD URL
             if (url.includes('.mpd')) {
+                if (dashPlayer) {
+                    dashPlayer.reset();
+                }
                 dashPlayer = dashjs.MediaPlayer().create();
+
+                // Add more robust error handling
+                dashPlayer.on(dashjs.MediaPlayer.events.ERROR, (e) => {
+                    console.error('DASH Player Error:', e);
+                    if (e.error && e.error.code === 17) { // NETWORK_ERROR
+                        elements.playerMessageArea.textContent = 'Network error. Retrying...';
+                        elements.playerMessageArea.style.display = 'block';
+                        setTimeout(() => dashPlayer.initialize(elements.player, url, true), 3000);
+                    } else if (e.error && e.error.message) {
+                        elements.playerMessageArea.textContent = `Error: ${e.error.message}`;
+                        elements.playerMessageArea.style.display = 'block';
+                    } else {
+                        elements.playerMessageArea.textContent = 'An unknown error occurred with the video stream.';
+                        elements.playerMessageHessageArea.style.display = 'block';
+                    }
+                });
+
                 dashPlayer.initialize(elements.player, url, true);
                 return;
             }
@@ -3621,6 +3672,12 @@
             });
 
             elements.countryFilter.addEventListener('change', () => {
+                const activeNavItem = document.querySelector('.nav-item.active');
+                const category = activeNavItem ? activeNavItem.dataset.category : 'all';
+                renderContent(category);
+            });
+
+            elements.yearFilter.addEventListener('change', () => {
                 const activeNavItem = document.querySelector('.nav-item.active');
                 const category = activeNavItem ? activeNavItem.dataset.category : 'all';
                 renderContent(category);
