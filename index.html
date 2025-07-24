@@ -2738,6 +2738,14 @@
             testConnectionSpeed();
             
             fetchData().then(() => {
+                // Check if data was loaded successfully
+                if (!cineData || !cineData.Categories || cineData.Categories.length === 0) {
+                    console.warn("⚠️ No data available, showing empty state");
+                    showEmptyState();
+                    return;
+                }
+                
+                console.log("🎬 Initializing app with data...");
                 renderCarousel();
                 renderContentFilters();
                 renderContent();
@@ -2745,7 +2753,43 @@
                 updateCarousel();
                 setupLazyLoading();
                 history.replaceState({ page: 'browse' }, 'Browse Content', window.location.pathname + window.location.search);
+                console.log("✅ App initialization complete");
+            }).catch(err => {
+                console.error("❌ App initialization failed:", err);
+                showEmptyState();
             });
+        }
+        
+        // Show empty state when no data is available
+        function showEmptyState() {
+            const contentGrid = document.getElementById('content-grid');
+            if (contentGrid) {
+                contentGrid.innerHTML = `
+                    <div class="empty-state" style="text-align: center; padding: 50px; color: var(--gray);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 20px; color: var(--primary);"></i>
+                        <h2>Content Unavailable</h2>
+                        <p>Unable to load content at this time. Please check your internet connection and try refreshing the page.</p>
+                        <button onclick="window.location.reload()" style="
+                            background: var(--primary); 
+                            color: white; 
+                            border: none; 
+                            padding: 10px 20px; 
+                            border-radius: 5px; 
+                            cursor: pointer; 
+                            margin-top: 20px;
+                            font-size: 16px;
+                        ">
+                            <i class="fas fa-refresh"></i> Refresh Page
+                        </button>
+                    </div>
+                `;
+            }
+            
+            // Hide carousel if no data
+            const carousel = document.querySelector('.hero-carousel');
+            if (carousel) {
+                carousel.style.display = 'none';
+            }
         }
         
         // Fetch data from API or local file
@@ -2753,23 +2797,73 @@
             try {
                 elements.loadingSpinner.style.display = 'block';
 
-                const response = await fetch("https://raw.githubusercontent.com/MovieAddict88/Movie-Source/main/data.json"); // Changed to local file
-                if (!response.ok) throw new Error("Online source failed");
+                // Try online source first
+                try {
+                    console.log("🌐 Attempting to load from online source...");
+                    const response = await fetch("https://raw.githubusercontent.com/MovieAddict88/Movie-Source/main/data.json");
+                    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 
-                const base64Data = await response.text();
-                // Use modern TextDecoder instead of deprecated escape() function
-                const binaryString = atob(base64Data);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
+                    const base64Data = await response.text();
+                    
+                    // Validate base64 data
+                    if (!base64Data || base64Data.length < 100) {
+                        throw new Error("Invalid or empty data received");
+                    }
+                    
+                    // Use modern TextDecoder instead of deprecated escape() function
+                    const binaryString = atob(base64Data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    const decodedData = new TextDecoder('utf-8').decode(bytes);
+                    cineData = JSON.parse(decodedData);
+                    
+                    // Validate data structure
+                    if (!cineData || !cineData.Categories || !Array.isArray(cineData.Categories)) {
+                        throw new Error("Invalid data structure received");
+                    }
+                    
+                    console.log("✅ Loaded from ONLINE source");
+                    console.log(`📊 Found ${cineData.Categories.length} categories`);
+                    return;
+                    
+                } catch (onlineErr) {
+                    console.warn("⚠️ Online source failed:", onlineErr.message);
+                    
+                    // Try local fallback
+                    try {
+                        console.log("📁 Attempting to load from local file...");
+                        const localResponse = await fetch("./data.json");
+                        if (!localResponse.ok) throw new Error("Local file not found");
+
+                        cineData = await localResponse.json();
+                        
+                        // Validate data structure
+                        if (!cineData || !cineData.Categories || !Array.isArray(cineData.Categories)) {
+                            throw new Error("Invalid local data structure");
+                        }
+                        
+                        console.log("✅ Loaded from LOCAL file");
+                        console.log(`📊 Found ${cineData.Categories.length} categories`);
+                        return;
+                        
+                    } catch (localErr) {
+                        console.error("❌ Local source also failed:", localErr.message);
+                        throw new Error(`Both sources failed. Online: ${onlineErr.message}, Local: ${localErr.message}`);
+                    }
                 }
-                const decodedData = new TextDecoder('utf-8').decode(bytes);
-                cineData = JSON.parse(decodedData);
-                console.log("✅ Loaded from LOCAL source");
 
             } catch (err) {
-                console.error("❌ Both online and offline data failed to load.", err);
-                alert("Data loading failed. Please check your internet or local file.");
+                console.error("❌ Data loading failed:", err);
+                
+                // Show user-friendly error message
+                const errorMsg = `Failed to load content data.\n\nDetails: ${err.message}\n\nPlease check your internet connection or try refreshing the page.`;
+                alert(errorMsg);
+                
+                // Set empty data to prevent further errors
+                cineData = { Categories: [] };
+                
             } finally {
                 elements.loadingSpinner.style.display = 'none';
             }
@@ -2816,10 +2910,19 @@
         
         // Render carousel
         function renderCarousel() {
-            if (!cineData || !cineData.Categories || cineData.Categories.length < 3) {
-                console.warn("Carousel data is not as expected. Skipping render.");
+            console.log("🎠 Starting carousel render...");
+            
+            if (!cineData || !cineData.Categories) {
+                console.warn("⚠️ No data available for carousel");
                 return;
             }
+            
+            if (cineData.Categories.length < 3) {
+                console.warn(`⚠️ Insufficient categories for carousel: ${cineData.Categories.length} (need at least 3)`);
+                return;
+            }
+            
+            console.log(`📊 Found ${cineData.Categories.length} categories for carousel`);
 
             const featuredContent = [];
             const moviesCategory = cineData.Categories.find(cat => cat.MainCategory.toLowerCase().includes('movie'));
@@ -2975,7 +3078,14 @@
         
         // Render content based on filters
         function renderContent(category = 'all') {
-            if (!cineData || !cineData.Categories) return;
+            console.log(`🎯 Rendering content for category: ${category}`);
+            
+            if (!cineData || !cineData.Categories) {
+                console.warn("⚠️ No data available for rendering content");
+                return;
+            }
+            
+            console.log(`📊 Available categories: ${cineData.Categories.length}`);
 
             // Reset pagination
             currentPage = 1;
