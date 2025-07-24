@@ -2538,6 +2538,9 @@
         let currentSeries = null;
         let isStretched = false;
         
+        // Timer management for memory leak prevention
+        let activeTimers = new Set();
+        
         // Function to shuffle an array
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
@@ -2545,6 +2548,27 @@
                 [array[i], array[j]] = [array[j], array[i]];
             }
             return array;
+        }
+        
+        // Safe timer functions to prevent memory leaks
+        function safeSetTimeout(callback, delay) {
+            const timeoutId = setTimeout(() => {
+                activeTimers.delete(timeoutId);
+                callback();
+            }, delay);
+            activeTimers.add(timeoutId);
+            return timeoutId;
+        }
+        
+        function safeClearTimeout(timeoutId) {
+            clearTimeout(timeoutId);
+            activeTimers.delete(timeoutId);
+        }
+        
+        // Clean up all active timers
+        function cleanupTimers() {
+            activeTimers.forEach(timerId => clearTimeout(timerId));
+            activeTimers.clear();
         }
         
         // Sort content based on criteria
@@ -2584,6 +2608,11 @@
 
         // Function to generate star rating HTML
         function generateStarRating(ratingStr) {
+            // Input validation and sanitization
+            if (typeof ratingStr !== 'string' && typeof ratingStr !== 'number') {
+                return '<span>N/A</span>';
+            }
+            
             const rating = parseFloat(ratingStr);
             if (isNaN(rating) || rating < 0 || rating > 10) {
                 return '<span>N/A</span>';
@@ -2658,7 +2687,13 @@
                 if (!response.ok) throw new Error("Online source failed");
 
                 const base64Data = await response.text();
-                const decodedData = decodeURIComponent(escape(atob(base64Data)));
+                // Use modern TextDecoder instead of deprecated escape() function
+                const binaryString = atob(base64Data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                const decodedData = new TextDecoder('utf-8').decode(bytes);
                 cineData = JSON.parse(decodedData);
                 console.log("✅ Loaded from LOCAL source");
 
@@ -2700,7 +2735,12 @@
         // Helper function to get random distinct items from an array
         function getRandomItems(arr, count) {
             if (!arr || arr.length === 0) return [];
-            const shuffled = [...arr].sort(() => 0.5 - Math.random());
+            // Use proper Fisher-Yates shuffle algorithm for unbiased shuffling
+            const shuffled = [...arr];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
             return shuffled.slice(0, Math.min(count, arr.length));
         }
         
@@ -3226,8 +3266,9 @@
 
                 // Render related content
                 elements.relatedGrid.innerHTML = '';
-                const relatedContent = cachedContent.filter(item => item.Title !== content.Title)
-                                               .sort(() => 0.5 - Math.random()).slice(0, 8);
+                            // Filter and properly shuffle related content
+            const filteredContent = cachedContent.filter(item => item.Title !== content.Title);
+            const relatedContent = getRandomItems(filteredContent, 8);
                 relatedContent.forEach(item => { /* ... render related card ... */ 
                     const card = document.createElement('div');
                     card.className = 'related-card';
@@ -3348,7 +3389,8 @@
                         iframe.style.border = 'none';
                         iframe.setAttribute('allowfullscreen', '');
                         iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
-                        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-forms');
+                        // Use more restrictive sandbox for better security
+                        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation');
                         playerContainer.appendChild(iframe);
                     }
                     iframe.src = embedUrl;
@@ -3370,7 +3412,8 @@
                     iframe.style.border = 'none';
                     iframe.setAttribute('allowfullscreen', '');
                     iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
-                    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-forms');
+                    // Use more restrictive sandbox for better security
+                    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation');
                     playerContainer.appendChild(iframe);
                 }
                 iframe.src = url.replace('/file/', '/embed/');
@@ -3432,7 +3475,7 @@
                     if (e.error && e.error.code === 17) { // NETWORK_ERROR
                         elements.playerMessageArea.textContent = 'Network error. Retrying...';
                         elements.playerMessageArea.style.display = 'block';
-                        setTimeout(() => dashPlayer.initialize(elements.player, url, true), 3000);
+                        safeSetTimeout(() => dashPlayer.initialize(elements.player, url, true), 3000);
                     } else if (e.error && e.error.message) {
                         elements.playerMessageArea.textContent = `Error: ${e.error.message}`;
                         elements.playerMessageArea.style.display = 'block';
@@ -3589,7 +3632,7 @@
             updateNavigationButtonsState(); // Update buttons after episode changes
 
             if (autoplay) {
-                setTimeout(() => playerInstance.play(), 500); // Delay to allow source to load
+                                    safeSetTimeout(() => playerInstance.play(), 500); // Delay to allow source to load
             }
         }
         
@@ -3909,22 +3952,31 @@
             }
         }
 
-        // Debounce function for search
+        // Debounce function for search - improved with proper cleanup
         function debounce(func, wait) {
-  let timeout;
-  return function(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func.apply(this, args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-}
+            let timeout;
+            return function(...args) {
+                const later = () => {
+                    timeout = null;
+                    try {
+                        func.apply(this, args);
+                    } catch (error) {
+                        console.error('Error in debounced function:', error);
+                    }
+                };
+                safeClearTimeout(timeout);
+                timeout = safeSetTimeout(later, wait);
+            };
+        }
 
 
         // Handle search
         function handleSearch() {
+            if (!elements.searchInput || !elements.searchResults) {
+                console.error('Search elements not found');
+                return;
+            }
+            
             const query = elements.searchInput.value.toLowerCase();
             elements.searchResults.innerHTML = '';
 
@@ -3993,6 +4045,17 @@
         document.addEventListener('DOMContentLoaded', () => {
             init();
             fetchNotification();
+        });
+        
+        // Clean up resources when page is unloaded
+        window.addEventListener('beforeunload', () => {
+            cleanupTimers();
+            if (playerInstance && typeof playerInstance.destroy === 'function') {
+                playerInstance.destroy();
+            }
+            if (dashPlayer && typeof dashPlayer.destroy === 'function') {
+                dashPlayer.destroy();
+            }
         });
 
         // --- Notification Functionality ---
