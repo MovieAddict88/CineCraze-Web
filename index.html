@@ -3179,19 +3179,61 @@
         
         // Open viewer for content
         function openViewer(content) {
+            // Comprehensive cleanup to prevent transition bugs
+            const playerContainer = document.querySelector('.player-container');
+            
+            // Stop and cleanup existing players
             if (playerInstance) {
-                playerInstance.destroy();
-                playerInstance = null;
+                try {
+                    if (typeof playerInstance.pause === 'function') {
+                        playerInstance.pause();
+                    }
+                    if (typeof playerInstance.stop === 'function') {
+                        playerInstance.stop();
+                    }
+                    if (typeof playerInstance.destroy === 'function') {
+                        playerInstance.destroy();
+                    }
+                } catch (e) {
+                    console.warn('Error cleaning up Plyr instance:', e);
+                } finally {
+                    playerInstance = null;
+                }
             }
+            
             if (dashPlayer) {
-                dashPlayer.reset();
-                dashPlayer = null;
+                try {
+                    if (typeof dashPlayer.reset === 'function') {
+                        dashPlayer.reset();
+                    }
+                    if (typeof dashPlayer.destroy === 'function') {
+                        dashPlayer.destroy();
+                    }
+                } catch (e) {
+                    console.warn('Error cleaning up DASH player:', e);
+                } finally {
+                    dashPlayer = null;
+                }
             }
 
-            // Re-create the video element to ensure a clean state
-            const playerContainer = document.querySelector('.player-container');
-            playerContainer.innerHTML = '<video id="player" playsinline controls></video>';
+            // Remove any existing iframes to prevent lingering external content
+            const existingIframes = playerContainer.querySelectorAll('iframe.external-content-iframe');
+            existingIframes.forEach(iframe => {
+                try {
+                    iframe.src = 'about:blank';
+                    iframe.remove();
+                } catch (e) {
+                    console.warn('Error removing iframe:', e);
+                }
+            });
+
+            // Re-create the video element to ensure a completely clean state
+            playerContainer.innerHTML = `
+                <video id="player" playsinline controls crossorigin="anonymous"></video>
+                <div id="player-message-area" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; padding: 20px; background-color: var(--youtube-gray); border-radius: var(--radius); color: var(--light); z-index: 10;"></div>
+            `;
             elements.player = document.getElementById('player');
+            elements.playerMessageArea = document.getElementById('player-message-area');
 
 
             currentContentInfo = {
@@ -3351,23 +3393,53 @@
             elements.dislikeBtn.addEventListener('click', handleDislike);
         }
         
-        // Play URL with YouTube and Vidsrc support
+        // Play URL with comprehensive source type support
         function playUrl(url) {
-            if (!url || !playerInstance) return;
+            if (!url || !playerInstance) {
+                console.warn('playUrl called with invalid parameters:', { url, playerInstance });
+                return;
+            }
 
+            console.log('Playing URL:', url);
             const playerContainer = document.querySelector('.player-container');
             let iframe = playerContainer.querySelector('iframe.external-content-iframe');
 
-            // Reset dash.js player if it exists
+            // Comprehensive cleanup before switching sources
+            // Reset dash.js player if it exists to prevent conflicts
             if (dashPlayer) {
-                dashPlayer.reset();
-                dashPlayer = null;
+                try {
+                    console.log('Cleaning up existing DASH player');
+                    if (typeof dashPlayer.reset === 'function') {
+                        dashPlayer.reset();
+                    }
+                    if (typeof dashPlayer.destroy === 'function') {
+                        dashPlayer.destroy();
+                    }
+                } catch (e) {
+                    console.warn('Error cleaning up DASH player:', e);
+                } finally {
+                    dashPlayer = null;
+                }
             }
 
-            // Always stop Plyr if it's playing, before deciding what to do next.
-            if (playerInstance && typeof playerInstance.stop === 'function') {
-                playerInstance.stop();
+            // Always stop Plyr if it's playing, before deciding what to do next
+            if (playerInstance) {
+                try {
+                    if (typeof playerInstance.pause === 'function') {
+                        playerInstance.pause();
+                    }
+                    if (typeof playerInstance.stop === 'function') {
+                        playerInstance.stop();
+                    }
+                    // Clear any existing source to prevent conflicts
+                    if (playerInstance.source) {
+                        playerInstance.source = null;
+                    }
+                } catch (e) {
+                    console.warn('Error stopping Plyr player:', e);
+                }
             }
+
             // Ensure message area is hidden by default for regular playback
             elements.playerMessageArea.style.display = 'none';
             elements.playerMessageArea.textContent = '';
@@ -3462,30 +3534,184 @@
                     return;
                 }
             }
-            // Check for MPD URL
-            if (url.includes('.mpd')) {
+            // Check for MPD URL (MPEG-DASH)
+            if (isMPDUrl(url)) {
+                console.log('Detected MPD URL, initializing DASH player:', url);
+                
+                // Clean up any existing DASH player
                 if (dashPlayer) {
-                    dashPlayer.reset();
+                    try {
+                        dashPlayer.reset();
+                        dashPlayer = null;
+                    } catch (e) {
+                        console.warn('Error resetting DASH player:', e);
+                    }
                 }
+
+                // Hide any error messages from previous attempts
+                elements.playerMessageArea.style.display = 'none';
+                elements.playerMessageArea.textContent = '';
+
+                // Create new DASH player instance
                 dashPlayer = dashjs.MediaPlayer().create();
 
-                // Add more robust error handling
+                // Configure DASH player settings for better compatibility
+                dashPlayer.getSettings().streaming.retryAttempts.MPD = 3;
+                dashPlayer.getSettings().streaming.retryIntervals.MPD = 500;
+                dashPlayer.getSettings().streaming.abandonLoadTimeout = 10000;
+                dashPlayer.getSettings().streaming.wallclockTimeUpdateInterval = 50;
+                dashPlayer.getSettings().streaming.bufferTimeAtTopQuality = 30;
+                dashPlayer.getSettings().streaming.bufferTimeAtTopQualityLongForm = 60;
+                
+                // Enable automatic bitrate switching
+                dashPlayer.getSettings().streaming.abr.autoSwitchBitrate = {
+                    audio: true,
+                    video: true
+                };
+
+                // Add comprehensive error handling
                 dashPlayer.on(dashjs.MediaPlayer.events.ERROR, (e) => {
                     console.error('DASH Player Error:', e);
-                    if (e.error && e.error.code === 17) { // NETWORK_ERROR
-                        elements.playerMessageArea.textContent = 'Network error. Retrying...';
-                        elements.playerMessageArea.style.display = 'block';
-                        safeSetTimeout(() => dashPlayer.initialize(elements.player, url, true), 3000);
-                    } else if (e.error && e.error.message) {
-                        elements.playerMessageArea.textContent = `Error: ${e.error.message}`;
-                        elements.playerMessageArea.style.display = 'block';
-                    } else {
-                        elements.playerMessageArea.textContent = 'An unknown error occurred with the video stream.';
-                        elements.playerMessageHessageArea.style.display = 'block';
+                    
+                    let errorMessage = 'Error loading video stream.';
+                    let shouldRetry = false;
+                    
+                    if (e.error) {
+                        switch (e.error.code) {
+                            case 17: // NETWORK_ERROR
+                                errorMessage = 'Network error. Checking connection...';
+                                shouldRetry = true;
+                                break;
+                            case 25: // MANIFEST_LOADER_PARSING_FAILURE_ERROR_CODE
+                                errorMessage = 'Invalid video format. Please try another source.';
+                                break;
+                            case 27: // SEGMENTS_UPDATE_FAILED_ERROR_CODE
+                                errorMessage = 'Video segments unavailable. Retrying...';
+                                shouldRetry = true;
+                                break;
+                            default:
+                                if (e.error.message) {
+                                    errorMessage = `Stream error: ${e.error.message}`;
+                                }
+                        }
+                    }
+                    
+                    elements.playerMessageArea.textContent = errorMessage;
+                    elements.playerMessageArea.style.display = 'block';
+                    
+                    if (shouldRetry) {
+                        safeSetTimeout(() => {
+                            console.log('Retrying DASH stream initialization...');
+                            if (dashPlayer) {
+                                try {
+                                    dashPlayer.initialize(elements.player, url, true);
+                                } catch (retryError) {
+                                    console.error('Retry failed:', retryError);
+                                    elements.playerMessageArea.textContent = 'Failed to load video. Please try refreshing.';
+                                }
+                            }
+                        }, 3000);
                     }
                 });
 
-                dashPlayer.initialize(elements.player, url, true);
+                // Add successful initialization handler
+                dashPlayer.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, () => {
+                    console.log('DASH stream initialized successfully');
+                    elements.playerMessageArea.style.display = 'none';
+                    elements.playerMessageArea.textContent = '';
+                });
+
+                // Add playback started handler
+                dashPlayer.on(dashjs.MediaPlayer.events.PLAYBACK_STARTED, () => {
+                    console.log('DASH playback started');
+                    elements.playerMessageArea.style.display = 'none';
+                });
+
+                // Add playback ended handler for live streams
+                dashPlayer.on(dashjs.MediaPlayer.events.PLAYBACK_ENDED, () => {
+                    console.log('DASH playback ended');
+                });
+
+                // Add quality change handler
+                dashPlayer.on(dashjs.MediaPlayer.events.QUALITY_CHANGE_RENDERED, (e) => {
+                    console.log('DASH quality changed:', e);
+                });
+
+                // Add fragment loading error handler with retry logic
+                dashPlayer.on(dashjs.MediaPlayer.events.FRAGMENT_LOADING_COMPLETED, (e) => {
+                    if (e.error) {
+                        console.warn('Fragment loading error:', e.error);
+                    }
+                });
+
+                // Add buffer events for better user feedback
+                dashPlayer.on(dashjs.MediaPlayer.events.BUFFER_EMPTY, () => {
+                    console.log('Buffer empty, buffering...');
+                });
+
+                dashPlayer.on(dashjs.MediaPlayer.events.BUFFER_LOADED, () => {
+                    console.log('Buffer loaded');
+                });
+
+                // Handle manifest loading
+                dashPlayer.on(dashjs.MediaPlayer.events.MANIFEST_LOADED, () => {
+                    console.log('DASH manifest loaded successfully');
+                });
+
+                // Set CORS configuration for cross-origin requests
+                dashPlayer.getSettings().streaming.xhr = {
+                    withCredentials: false
+                };
+
+                try {
+                    // Validate the MPD URL before attempting to play
+                    console.log('Validating MPD URL...');
+                    validateMPDUrl(url).then(isValid => {
+                        if (isValid || true) { // Always attempt since validation may fail due to CORS
+                            try {
+                                // Initialize DASH player with the MPD URL
+                                dashPlayer.initialize(elements.player, url, true);
+                                console.log('DASH player initialization started for:', url);
+                                
+                                // Show loading message
+                                elements.playerMessageArea.textContent = 'Loading DASH stream...';
+                                elements.playerMessageArea.style.display = 'block';
+                                
+                                // Hide loading message after a timeout if no other events occur
+                                safeSetTimeout(() => {
+                                    if (elements.playerMessageArea.textContent === 'Loading DASH stream...') {
+                                        elements.playerMessageArea.style.display = 'none';
+                                    }
+                                }, 10000);
+                                
+                            } catch (initError) {
+                                console.error('Failed to initialize DASH player:', initError);
+                                elements.playerMessageArea.textContent = 'Failed to initialize DASH player. The stream may not be compatible.';
+                                elements.playerMessageArea.style.display = 'block';
+                            }
+                        } else {
+                            console.error('MPD URL validation failed');
+                            elements.playerMessageArea.textContent = 'Invalid or inaccessible DASH stream URL.';
+                            elements.playerMessageArea.style.display = 'block';
+                        }
+                    }).catch(validationError => {
+                        console.warn('MPD URL validation error, proceeding anyway:', validationError);
+                        // Proceed with initialization even if validation fails
+                        try {
+                            dashPlayer.initialize(elements.player, url, true);
+                            console.log('DASH player initialization started (validation bypassed)');
+                        } catch (initError) {
+                            console.error('Failed to initialize DASH player:', initError);
+                            elements.playerMessageArea.textContent = 'Failed to initialize video player. Please try refreshing.';
+                            elements.playerMessageArea.style.display = 'block';
+                        }
+                    });
+                } catch (initError) {
+                    console.error('Failed to initialize DASH player:', initError);
+                    elements.playerMessageArea.textContent = 'Failed to initialize video player. Please try refreshing.';
+                    elements.playerMessageArea.style.display = 'block';
+                }
+                
                 return;
             }
 
@@ -3497,6 +3723,31 @@
                     type: url.includes('m3u8') ? 'application/x-mpegURL' : 'video/mp4'
                 }]
             };
+        }
+
+        // Check if URL is an MPD (MPEG-DASH) URL
+        function isMPDUrl(url) {
+            if (!url || typeof url !== 'string') return false;
+            // Check for .mpd extension or DASH-specific domains
+            return url.includes('.mpd') || 
+                   url.includes('dash') ||
+                   /\.mpd(\?|$)/.test(url);
+        }
+
+        // Validate MPD URL accessibility
+        async function validateMPDUrl(url) {
+            try {
+                // Try to fetch the manifest to check if it's accessible
+                const response = await fetch(url, { 
+                    method: 'HEAD',
+                    mode: 'cors'
+                });
+                return response.ok || response.status === 0; // Status 0 can occur with CORS
+            } catch (error) {
+                console.warn('MPD URL validation failed (this may be normal due to CORS):', error);
+                // Return true anyway since many valid DASH streams block HEAD requests
+                return true;
+            }
         }
 
         // Check if URL is YouTube
@@ -3552,31 +3803,53 @@
             return id;
         }
         
-        // Update player source
+        // Update player source with enhanced MPD support
         function updatePlayerSource(servers) {
-            if (!playerInstance) return;
+            if (!playerInstance) {
+                console.warn('updatePlayerSource called but playerInstance is not available');
+                return;
+            }
 
-            if (servers && servers.length > 0) {
-                const sources = [];
-                let hasSpecialSource = false;
+            if (!servers || servers.length === 0) {
+                console.warn('updatePlayerSource called with no servers');
+                return;
+            }
 
-                for (const server of servers) {
-                    if (isVidsrcUrl(server.url) || isVidjoyUrl(server.url) || isMegaNzUrl(server.url) || isGoogleDriveUrl(server.url)) {
-                        playUrl(server.url);
-                        hasSpecialSource = true;
-                        break;
-                    }
-                    sources.push({
-                        src: server.url,
-                        size: parseInt(server.name.replace('p', '')),
-                    });
+            console.log('Updating player source with servers:', servers);
+            const sources = [];
+            let hasSpecialSource = false;
+
+            for (const server of servers) {
+                const url = server.url;
+                
+                // Check for special URL types that need custom handling
+                if (isVidsrcUrl(url) || isVidjoyUrl(url) || isMegaNzUrl(url) || isGoogleDriveUrl(url) || isMPDUrl(url)) {
+                    console.log('Detected special source type for:', url);
+                    playUrl(url);
+                    hasSpecialSource = true;
+                    break;
                 }
+                
+                // Regular video sources
+                sources.push({
+                    src: url,
+                    size: parseInt(server.name.replace('p', '')) || 720, // Default to 720p if parsing fails
+                    type: url.includes('m3u8') ? 'application/x-mpegURL' : 'video/mp4'
+                });
+            }
 
-                if (!hasSpecialSource) {
+            // Only set regular sources if no special source was found
+            if (!hasSpecialSource && sources.length > 0) {
+                try {
+                    console.log('Setting regular video sources:', sources);
                     playerInstance.source = {
                         type: 'video',
                         sources: sources,
                     };
+                } catch (error) {
+                    console.error('Error setting player source:', error);
+                    elements.playerMessageArea.textContent = 'Error loading video source.';
+                    elements.playerMessageArea.style.display = 'block';
                 }
             }
         }
@@ -3646,33 +3919,58 @@
             // Hide viewer
             elements.viewerPage.style.display = 'none';
 
+            // Comprehensive player cleanup
             if (playerInstance) {
-                playerInstance.pause();
-                playerInstance.stop();
+                try {
+                    if (typeof playerInstance.pause === 'function') {
+                        playerInstance.pause();
+                    }
+                    if (typeof playerInstance.stop === 'function') {
+                        playerInstance.stop();
+                    }
+                    // Reset player source to prevent lingering content
+                    if (playerInstance.source) {
+                        playerInstance.source = null;
+                    }
+                } catch (e) {
+                    console.warn('Error during player cleanup:', e);
+                }
             }
 
             // Reset dash.js player if it exists
             if (dashPlayer) {
-                dashPlayer.reset();
-                dashPlayer = null;
-            }
-
-            // Reset player state
-            if (playerInstance && playerInstance.source) {
-                playerInstance.source = null;
-            }
-
-            // Explicitly find and remove any Vidsrc/external iframe
-            const playerContainer = document.querySelector('.player-container');
-            if (playerContainer) {
-                const externalIframe = playerContainer.querySelector('iframe.external-content-iframe');
-                if (externalIframe) {
-                    externalIframe.src = 'about:blank'; // Stop loading/playing
-                    externalIframe.remove(); // Remove from DOM
+                try {
+                    if (typeof dashPlayer.reset === 'function') {
+                        dashPlayer.reset();
+                    }
+                    if (typeof dashPlayer.destroy === 'function') {
+                        dashPlayer.destroy();
+                    }
+                } catch (e) {
+                    console.warn('Error cleaning up DASH player:', e);
+                } finally {
+                    dashPlayer = null;
                 }
             }
-            // Ensure Plyr player is visible again if it was hidden for an iframe
-            elements.player.style.display = 'block';
+
+            // Explicitly find and remove any external iframes
+            const playerContainer = document.querySelector('.player-container');
+            if (playerContainer) {
+                const externalIframes = playerContainer.querySelectorAll('iframe.external-content-iframe');
+                externalIframes.forEach(iframe => {
+                    try {
+                        iframe.src = 'about:blank'; // Stop loading/playing
+                        iframe.remove(); // Remove from DOM
+                    } catch (e) {
+                        console.warn('Error removing external iframe:', e);
+                    }
+                });
+                
+                // Ensure Plyr player is visible again if it was hidden for an iframe
+                if (elements.player) {
+                    elements.player.style.display = 'block';
+                }
+            }
 
 
             // Move season/episode selectors back to videoDetailsContainer and hide them
@@ -4429,6 +4727,58 @@
             }
         }
         // --- End Stretch Functionality ---
+
+        // --- Test MPD Functionality ---
+        // Test function for MPD playback (can be called from browser console)
+        window.testMPDPlayback = function(testUrl) {
+            const defaultTestUrls = [
+                'https://amg01006-abs-cbn-abscbn-gma-x7-dash-abscbnono-dzsx9.amagi.tv/index.mpd',
+                'https://qp-pldt-live-grp-02-prod.akamaized.net/out/u/tv5_hd.mpd'
+            ];
+            
+            const urlToTest = testUrl || defaultTestUrls[0];
+            
+            console.log('Testing MPD playback with URL:', urlToTest);
+            
+            if (!playerInstance) {
+                console.error('Player not initialized. Please open a video first.');
+                return;
+            }
+            
+            // Test the playUrl function directly
+            playUrl(urlToTest);
+        };
+
+        // Function to check DASH.js availability and version
+        window.checkDashSupport = function() {
+            console.log('Checking DASH support...');
+            console.log('DASH.js available:', typeof dashjs !== 'undefined');
+            if (typeof dashjs !== 'undefined') {
+                console.log('DASH.js version:', dashjs.Version || 'Unknown');
+                console.log('MediaPlayer available:', typeof dashjs.MediaPlayer !== 'undefined');
+            }
+            console.log('Current DASH player instance:', dashPlayer);
+            console.log('Browser supports MSE:', 'MediaSource' in window);
+            console.log('Browser supports encrypted media:', 'MediaKeySystemAccess' in window);
+        };
+
+        // Debug function to get current player state
+        window.getPlayerState = function() {
+            const state = {
+                playerInstance: !!playerInstance,
+                dashPlayer: !!dashPlayer,
+                currentVideo: elements.player ? elements.player.src : null,
+                playerReady: playerInstance ? playerInstance.ready : false,
+                isPlaying: playerInstance ? !playerInstance.paused : false,
+                hasError: elements.playerMessageArea ? elements.playerMessageArea.style.display !== 'none' : false,
+                errorMessage: elements.playerMessageArea ? elements.playerMessageArea.textContent : null
+            };
+            console.log('Current player state:', state);
+            return state;
+        };
+
+        console.log('MPD test functions loaded. Use testMPDPlayback(), checkDashSupport(), or getPlayerState() in console.');
+        // --- End Test MPD Functionality ---
 
     </script>
 
