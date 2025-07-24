@@ -1314,10 +1314,8 @@
             margin-bottom: 15px;
         }
 
-        .footer-about p {
-            color: var(--youtube-light-gray);
-            line-height: 1.6;
-            margin-bottom: 20px;
+        .footer-about {
+            text-align: center;
         }
 
         .footer-title {
@@ -1363,6 +1361,49 @@
         .social-links a:hover {
             background-color: var(--youtube-red);
             transform: translateY(-5px);
+        }
+
+        .download-button {
+            display: inline-block;
+            padding: 15px 25px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #e50914;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+
+        .download-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 300px;
+            height: 300px;
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            transition: transform 0.5s;
+        }
+
+        .download-button:hover::before {
+            transform: translate(-50%, -50%) scale(2);
+        }
+
+        .download-button:hover {
+            background-color: #b20710;
+        }
+
+        .download-image {
+            margin-top: 20px;
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
         }
 
         .adsense-banner {
@@ -2360,7 +2401,10 @@
     <footer>
         <div class="footer-content">
             <div class="footer-about">
-                <div class="footer-logo">CineCraze</div>
+                <div class="download-section">
+                    <a href="https://github.com/MovieAddict88/Movie-Source/raw/main/CineCraze.apk" class="download-button">Download CineCraze App</a>
+                    <img src="https://raw.githubusercontent.com/MovieAddict88/Movie-Source/main/cinecraze.png" alt="CineCraze App" class="download-image">
+                </div>
                 <p>Your ultimate destination for unlimited movies, TV shows, and live television. Stream anytime, anywhere on all your devices.</p>
                 <div class="social-links">
 
@@ -4313,7 +4357,7 @@
             const videoElement = playerInstance.elements.container.querySelector('video');
             if (videoElement) {
                 if (isStretched) {
-                    videoElement.style.objectFit = 'cover';
+                    videoElement.style.objectFit = 'fill';
                     elements.stretchBtn.classList.add('active');
                 } else {
                     videoElement.style.objectFit = 'contain';
