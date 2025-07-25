@@ -1,0 +1,467 @@
+{
+  "Categories": [
+    {
+      "MainCategory": "Live TV",
+      "SubCategories": [
+        "Entertainment"
+      ],
+      "Entries": [
+        
+    {
+      "MainCategory": "Movies",
+      "SubCategories": [
+        "Action"
+      ],
+      "Entries": [
+      {
+  "Title": "A2Z (ABS-CBN)",
+  "SubCategory": "",
+  "Country": "🇵🇭 Philippines",
+  "Description": "A2Z is a Philippine free-to-air blocktime broadcast television network based in Quezon City, with its studios located in Ortigas Center, Pasig. It serves as a flagship property of ZOE Broadcasting Network, the broadcast media arm of Jesus Is Lord Church Worldwide, in partnership with ABS-CBN Corporation as its main content provider through a blocktime agreement.",
+  "Poster": "https://i.imgur.com/43nZ2rv.png",
+  "Thumbnail": "https://i.imgur.com/43nZ2rv.png",
+  "Rating": null,
+  "Duration": "",
+  "Year": 2020,
+  "Servers": [
+    {
+      "name": "1080p",
+      "url": "https://qp-pldt-live-grp-02-prod.akamaized.net/out/u/cg_a2z.mpd"
+    },
+    {
+      "name": "720p",
+      "url": "https://qp-pldt-live-grp-02-prod.akamaized.net/out/u/tv5_5.m3u8"
+    },
+    {
+      "name": "480p",
+      "url": "https://qp-pldt-live-grp-02-prod.akamaized.net/out/u/tv5_4.m3u8"
+    },
+    {
+      "name": "360p",
+      "url": "https://qp-pldt-live-grp-02-prod.akamaized.net/out/u/tv5_3.m3u8"
+    },
+    {
+      "name": "240p",
+      "url": "https://qp-pldt-live-grp-02-prod.akamaized.net/out/u/tv5_2.m3u8"
+    },
+    {
+      "name": "144p",
+      "url": "https://qp-pldt-live-grp-02-prod.akamaized.net/out/u/tv5_1.m3u8"
+    }
+  ],
+  "mpdDrm": {
+    "clearkey": {
+      "keys": {
+      "f703e4c8ec9041eeb5028ab4248fa094:c22f2162e176eee6273a5d0b68d19530"
+      }
+    }
+  }
+},
+        {
+          "Title": "Man with No Past",
+          "SubCategory": "Action, Drama",
+          "Country": "🇺🇸 United States of America",
+          "Description": "Waking up in an unfamiliar city, a man with no memory must confront the mysteries of his own identity. However, his desperate search to uncover the past pits him against a powerful enemy, leading to a showdown that ultimately reveals the truth.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 7.056,
+          "Duration": "103 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=1315986"
+            }
+          ]
+        },
+        {
+          "Title": "Muromachi Burai",
+          "SubCategory": "Action, Drama",
+          "Country": "🇯🇵 Japan",
+          "Description": "Set in war-torn 15th century Kyoto, on the eve of the Onin War, the movie centers on a band of outlaws led by Hyoe (Oizumi) a scoundrel whose lethal sword skills place him at the tip of the spear in a deadly uprising against the corrupt Shogunate and its army, led by former friend-turned-archrival, Doken (Tsutsumi).",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 9.2,
+          "Duration": "135 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=1246369"
+            }
+          ]
+        },
+        {
+          "Title": "Kayara",
+          "SubCategory": "Animation, Adventure, Family",
+          "Country": "🇵🇪 Peru",
+          "Description": "A courageous and athletic teenager, Kayara dreams that she is destined to be the first female to break into the league of Chasquis - the official messengers of the Incan empire. As she learns what it takes to be a Chasqui along with its challenges, she tackles every mission she gets and discovers the ancient stories of her land and her people.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 7.637,
+          "Duration": "81 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=666154"
+            }
+          ]
+        },
+        {
+          "Title": "Squid Game: Making Season 2",
+          "SubCategory": "Documentary",
+          "Country": "🇰🇷 South Korea",
+          "Description": "From set designs to character arcs, get exclusive cast and director interviews on how Season 2 of the globally most-watched series was brought to life.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 8.5,
+          "Duration": "28 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=1412113"
+            }
+          ]
+        },
+        {
+          "Title": "Mikaela",
+          "SubCategory": "Action, Thriller",
+          "Country": "🇪🇸 Spain",
+          "Description": "During the eve of the 6th of January, a record-breaking snowstorm sweeps across Spain. In the midst of its chaos, a group of robbers seizes the opportunity to hijack an armoured van. A few meters away is Leo, a finished policeman who has nothing to lose. With the unexpected aid of a young woman, he will try to stop the band from running away with their loot.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 6.246,
+          "Duration": "90 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=1315988"
+            }
+          ]
+        },
+        {
+          "Title": "Detective Chinatown 1900",
+          "SubCategory": "Comedy, Mystery, Action",
+          "Country": "🇨🇳 China",
+          "Description": "In 1900, a white woman was murdered in Chinatown in San Francisco, and the suspect was a Chinese man. The murder caused social shock, and people demanded the closure of Chinatown.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 6.389,
+          "Duration": "135 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=1357305"
+            }
+          ]
+        },
+        {
+          "Title": "Ne Zha 2",
+          "SubCategory": "Animation, Fantasy, Adventure, Action",
+          "Country": "🇨🇳 China",
+          "Description": "Following the Tribulation, although the souls of Ne Zha and Ao Bing were preserved, their physical bodies will soon be destroyed. Tai Yi Zhen Ren plans to use the Seven Colored Lotus to reshape their physical forms, but encounters numerous difficulties. What will become of Ne Zha and Ao Bing?",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 8.1,
+          "Duration": "144 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=980477"
+            }
+          ]
+        },
+        {
+          "Title": "Flight Risk",
+          "SubCategory": "Action, Thriller",
+          "Country": "🇺🇸 United States of America",
+          "Description": "A U.S. Marshal escorts a government witness to trial after he's accused of getting involved with a mob boss, only to discover that the pilot who is transporting them is also a hitman sent to assassinate the informant. After they subdue him, they're forced to fly together after discovering that there are others attempting to eliminate them.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 6.038,
+          "Duration": "91 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=1126166"
+            }
+          ]
+        },
+        {
+          "Title": "Companion",
+          "SubCategory": "Horror, Science Fiction, Thriller",
+          "Country": "🇺🇸 United States of America",
+          "Description": "During a weekend getaway at a secluded lakeside estate, a group of friends finds themselves entangled in a web of secrets, deception, and advanced technology. As tensions rise and loyalties are tested, they uncover unsettling truths about themselves and the world around them.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 7.08,
+          "Duration": "97 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=1084199"
+            }
+          ]
+        },
+        {
+          "Title": "Super Happy Forever",
+          "SubCategory": "Drama",
+          "Country": "🇫🇷 France, 🇯🇵 Japan",
+          "Description": "Accompanied by his friend Miyata, Sano returns to Izu, a seaside resort in Japan where five years before he fell in love with his wife Nagi.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 7.5,
+          "Duration": "94 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=1295035"
+            }
+          ]
+        },
+        {
+          "Title": "Miocardio",
+          "SubCategory": "Comedy, Romance",
+          "Country": "🇪🇸 Spain",
+          "Description": "",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 6,
+          "Duration": "77 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=1364176"
+            }
+          ]
+        },
+        {
+          "Title": "Alarum",
+          "SubCategory": "Action, Crime, Thriller",
+          "Country": "🇺🇸 United States of America",
+          "Description": "Two married spies caught in the crosshairs of an international intelligence network will stop at nothing to obtain a critical asset. Joe and Lara are agents living off the grid whose quiet retreat at a winter resort is blown to shreds when members of the old guard suspect the two may have joined an elite team of rogue spies, known as Alarum.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 5.78,
+          "Duration": "95 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=1249289"
+            }
+          ]
+        },
+        {
+          "Title": "Presence",
+          "SubCategory": "Horror, Thriller, Drama",
+          "Country": "🇺🇸 United States of America",
+          "Description": "A couple and their children move into a seemingly normal suburban home. When strange events occur, they begin to believe there is something else in the house with them. The presence is about to disrupt their lives in unimaginable ways.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 6.012,
+          "Duration": "84 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=1140535"
+            }
+          ]
+        },
+        {
+          "Title": "Fierce Town",
+          "SubCategory": "Drama, History, Action",
+          "Country": "🇷🇺 Russia",
+          "Description": "By the middle of the 12th century, the borders of the Mongolian Empire stretched from the Adriatic and Mediterranean Seas in the west to the southern lands of China in the east. The Mongolian army, under Khan Batu’s command, was known for its invisibility, destroying anyone who dared to challenge them. Yet, even within their central territories, some areas refused to bow to the Genghisids. Kozelsk was one of them. The Mongolian armies bypassed the high walls of this small town, considering that \"the skin of the wolf was not worth the risk of encountering its teeth\".However, one of the Khan’s commanders harbored a grudge against the town's citizens. Now, the people of Kozelsk must face a battle against the strongest army in the world, with no hope of victory. This is a story about people facing their death. Some try to escape, others are willing to do anything to survive, but most are prepared to protect their city from the relentless storms of the Mongolian hordes.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 7.241,
+          "Duration": "0 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=584855"
+            }
+          ]
+        },
+        {
+          "Title": "Henry Danger: The Movie",
+          "SubCategory": "Action, Comedy, Family, Science Fiction",
+          "Country": "🇺🇸 United States of America",
+          "Description": "Henry Hart meets a superfan—eager to fight crime with Kid Danger—who comes into possession of a device that can open up alternate realities. Facing a wild ride, Henry will need his best friend Jasper and his new superfan sidekick to find his way out or be stuck in another dimension forever.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 7.743,
+          "Duration": "86 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=926670"
+            }
+          ]
+        },
+        {
+          "Title": "Kiff Lore of the Ring Light",
+          "SubCategory": "Animation, Adventure, Comedy, Fantasy, Family, Music",
+          "Country": "🇺🇸 United States of America",
+          "Description": "Kiff and her friends go on an adventure to destroy a ring light of immense power.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 6.5,
+          "Duration": "24 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=1421982"
+            }
+          ]
+        },
+        {
+          "Title": "Marked Men: Rule + Shaw",
+          "SubCategory": "Romance, Drama",
+          "Country": "🇺🇸 United States of America",
+          "Description": "Shaw Landon has loved Rule Archer from the moment she laid eyes on him. Rule, a fiery-tempered rebel tattoo artist, doesn’t have time for a good girl pre-med student like Shaw — even if she’s the only one who can see the person he truly is. She lives by other people’s rules; he makes his own. But a short skirt, too many birthday cocktails, and spilled secrets lead to a night neither can forget. Now, Shaw and Rule must figure out how a girl like her and a guy like him are supposed to be together without destroying their love…or each other.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 6.641,
+          "Duration": "93 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=1078600"
+            }
+          ]
+        },
+        {
+          "Title": "Back in Action",
+          "SubCategory": "Action, Comedy",
+          "Country": "🇺🇸 United States of America",
+          "Description": "Fifteen years after vanishing from the CIA to start a family, elite spies Matt and Emily jump back into the world of espionage when their cover is blown.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 6.453,
+          "Duration": "114 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=993710"
+            }
+          ]
+        },
+        {
+          "Title": "Dog Man",
+          "SubCategory": "Family, Comedy, Adventure, Animation",
+          "Country": "🇺🇸 United States of America",
+          "Description": "When a faithful police dog and his human police officer owner are injured together on the job, a harebrained but life-saving surgery fuses the two of them together and Dog Man is born. Dog Man is sworn to protect and serve—and fetch, sit and roll over. As Dog Man embraces his new identity and strives to impress his Chief, he must stop the pretty evil plots of feline supervillain Petey the Cat.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 7.8,
+          "Duration": "89 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=774370"
+            }
+          ]
+        },
+        {
+          "Title": "Den of Thieves 2: Pantera",
+          "SubCategory": "Action, Crime, Thriller",
+          "Country": "🇨🇦 Canada, 🇺🇸 United States of America",
+          "Description": "Big Nick is back on the hunt in Europe and closing in on Donnie, who is embroiled in the treacherous and unpredictable world of diamond thieves and the infamous Panther mafia, as they plot a massive heist of the world's largest diamond exchange.",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": 6.7,
+          "Duration": "144 min",
+          "Year": 2025,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://vidsrc.net/embed/movie?tmdb=604685"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "MainCategory": "Movies",
+      "SubCategories": [
+        "Action"
+      ],
+      "Entries": [
+        {
+          "Title": "Hanggat May Hininga",
+          "SubCategory": "Action",
+          "Country": "Philippines",
+          "Description": "A pinoy old movie",
+          "Poster": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTQ8Vva_JHrKT3ZxYN8gwT9adxW8ROgvv2cf7GQo4X6zNBTc8jdgnlUKBw&s=10",
+          "Thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTQ8Vva_JHrKT3ZxYN8gwT9adxW8ROgvv2cf7GQo4X6zNBTc8jdgnlUKBw&s=10",
+          "Rating": 6,
+          "Duration": "2:00:00",
+          "Year": 1997,
+          "Servers": [
+            {
+              "name": "480p",
+              "url": "https://youtu.be/vvCzT-8PIho?si=sX0OLUOJg8l2biXx"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "MainCategory": "TV Series",
+      "SubCategories": [
+        "Anime"
+      ],
+      "Entries": [
+        {
+          "Title": "Naruto Kid Tagalog Dub",
+          "SubCategory": "Action,Anime",
+          "Country": "Japan",
+          "Description": "An anime series in Tagalog Dub",
+          "Poster": "https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak=/v3/t/assets/p9161972_b_h9_aa.jpg",
+          "Thumbnail": "https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak=/v3/t/assets/p9161972_b_h9_aa.jpg",
+          "Rating": 9,
+          "Year": 2005,
+          "Seasons": [
+            {
+              "Season": 1,
+              "SeasonPoster": "https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak=/v3/t/assets/p9161972_b_h9_aa.jpg",
+              "Episodes": [
+                {
+                  "Episode": 1,
+                  "Title": "Episode 1",
+                  "Duration": "00:24:00",
+                  "Description": "The first episode",
+                  "Thumbnail": "https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak=/v3/t/assets/p9161972_b_h9_aa.jpg",
+                  "Servers": [
+                    {
+                      "name": "480p",
+                      "url": "example.com"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
