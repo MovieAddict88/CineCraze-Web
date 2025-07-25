@@ -3242,7 +3242,8 @@
                 type: content.type,
                 description: content.Description,
                 poster: content.Poster || content.Thumbnail,
-                Servers: content.Servers
+                Servers: content.Servers,
+                mpdDrm: content.mpdDrm // Include MPD DRM configuration if present
             };
 
             incrementViewCount(content.Title);
@@ -3569,6 +3570,75 @@
                     video: true
                 };
 
+                            // Check for DRM configuration specifically for MPD streams
+            let drmConfig = null;
+            if (currentContentInfo && currentContentInfo.mpdDrm) {
+                drmConfig = currentContentInfo.mpdDrm;
+                console.log('MPD DRM configuration found:', drmConfig);
+            } else if (currentEpisode && currentEpisode.mpdDrm) {
+                drmConfig = currentEpisode.mpdDrm;
+                console.log('Episode MPD DRM configuration found:', drmConfig);
+            } else if (currentSeries && currentSeries.mpdDrm) {
+                drmConfig = currentSeries.mpdDrm;
+                console.log('Series MPD DRM configuration found:', drmConfig);
+            }
+
+                // Configure DRM if available
+                if (drmConfig) {
+                    console.log('Configuring DRM for DASH playback');
+                    
+                    const protectionData = {};
+                    
+                    // Configure Widevine DRM
+                    if (drmConfig.widevine) {
+                        protectionData['com.widevine.alpha'] = {
+                            serverURL: drmConfig.widevine.licenseUrl
+                        };
+                        
+                        // Add custom headers if provided
+                        if (drmConfig.widevine.headers) {
+                            protectionData['com.widevine.alpha'].httpRequestHeaders = drmConfig.widevine.headers;
+                        }
+                        
+                        // Add robustness levels if provided
+                        if (drmConfig.widevine.audioRobustness) {
+                            protectionData['com.widevine.alpha'].audioRobustness = drmConfig.widevine.audioRobustness;
+                        }
+                        if (drmConfig.widevine.videoRobustness) {
+                            protectionData['com.widevine.alpha'].videoRobustness = drmConfig.widevine.videoRobustness;
+                        }
+                    }
+                    
+                    // Configure PlayReady DRM
+                    if (drmConfig.playready) {
+                        protectionData['com.microsoft.playready'] = {
+                            serverURL: drmConfig.playready.licenseUrl
+                        };
+                        
+                        // Add custom headers if provided
+                        if (drmConfig.playready.headers) {
+                            protectionData['com.microsoft.playready'].httpRequestHeaders = drmConfig.playready.headers;
+                        }
+                    }
+                    
+                    // Configure Clearkey DRM (for testing)
+                    if (drmConfig.clearkey) {
+                        protectionData['org.w3.clearkey'] = {
+                            clearkeys: drmConfig.clearkey.keys
+                        };
+                    }
+                    
+                    // Set protection data to DASH player
+                    if (Object.keys(protectionData).length > 0) {
+                        console.log('Setting DRM protection data:', protectionData);
+                        dashPlayer.setProtectionData(protectionData);
+                        
+                        // Show DRM status message
+                        elements.playerMessageArea.textContent = 'Configuring DRM protection...';
+                        elements.playerMessageArea.style.display = 'block';
+                    }
+                }
+
                 // Add comprehensive error handling
                 dashPlayer.on(dashjs.MediaPlayer.events.ERROR, (e) => {
                     console.error('DASH Player Error:', e);
@@ -3612,6 +3682,23 @@
                             }
                         }, 3000);
                     }
+                });
+
+                // Add DRM-specific error handling
+                dashPlayer.on(dashjs.MediaPlayer.events.KEY_ERROR, (e) => {
+                    console.error('DRM Key Error:', e);
+                    elements.playerMessageArea.textContent = 'DRM license error. Content may be restricted.';
+                    elements.playerMessageArea.style.display = 'block';
+                });
+
+                dashPlayer.on(dashjs.MediaPlayer.events.KEY_SESSION_CREATED, (e) => {
+                    console.log('DRM Key Session Created:', e);
+                    elements.playerMessageArea.textContent = 'DRM session established...';
+                    elements.playerMessageArea.style.display = 'block';
+                });
+
+                dashPlayer.on(dashjs.MediaPlayer.events.KEY_STATUSES_MAP_UPDATED, (e) => {
+                    console.log('DRM Key Status Updated:', e);
                 });
 
                 // Add successful initialization handler
@@ -3674,12 +3761,12 @@
                                 console.log('DASH player initialization started for:', url);
                                 
                                 // Show loading message
-                                elements.playerMessageArea.textContent = 'Loading DASH stream...';
+                                elements.playerMessageArea.textContent = drmConfig ? 'Loading DRM-protected DASH stream...' : 'Loading DASH stream...';
                                 elements.playerMessageArea.style.display = 'block';
                                 
                                 // Hide loading message after a timeout if no other events occur
                                 safeSetTimeout(() => {
-                                    if (elements.playerMessageArea.textContent === 'Loading DASH stream...') {
+                                    if (elements.playerMessageArea.textContent.includes('Loading')) {
                                         elements.playerMessageArea.style.display = 'none';
                                     }
                                 }, 10000);
@@ -4771,13 +4858,91 @@
                 playerReady: playerInstance ? playerInstance.ready : false,
                 isPlaying: playerInstance ? !playerInstance.paused : false,
                 hasError: elements.playerMessageArea ? elements.playerMessageArea.style.display !== 'none' : false,
-                errorMessage: elements.playerMessageArea ? elements.playerMessageArea.textContent : null
+                errorMessage: elements.playerMessageArea ? elements.playerMessageArea.textContent : null,
+                mpdDrmConfig: currentContentInfo ? currentContentInfo.mpdDrm : null,
+                currentContent: currentContentInfo ? currentContentInfo.title : null
             };
             console.log('Current player state:', state);
             return state;
         };
 
-        console.log('MPD test functions loaded. Use testMPDPlayback(), checkDashSupport(), or getPlayerState() in console.');
+        // Function to test MPD DRM configuration
+        window.testMPDDRMConfig = function(mpdDrmConfig, mpdUrl) {
+            if (!mpdUrl) {
+                console.error('MPD URL is required for DRM testing');
+                return;
+            }
+            
+            if (!isMPDUrl(mpdUrl)) {
+                console.error('Provided URL is not an MPD file. DRM is only for MPD streams.');
+                return;
+            }
+            
+            console.log('Testing MPD DRM configuration:', mpdDrmConfig);
+            console.log('MPD URL:', mpdUrl);
+            
+            // Temporarily set MPD DRM config for testing
+            if (currentContentInfo) {
+                currentContentInfo.mpdDrm = mpdDrmConfig;
+                console.log('MPD DRM config set for testing. Now call playUrl() with the MPD URL.');
+            } else {
+                console.error('No content loaded. Please load content first.');
+            }
+        };
+
+        // Function to get DRM system support
+        window.checkDRMSupport = function() {
+            const support = {
+                widevine: false,
+                playready: false,
+                clearkey: false,
+                EME: 'MediaKeys' in window
+            };
+            
+            if (navigator.requestMediaKeySystemAccess) {
+                // Test Widevine
+                navigator.requestMediaKeySystemAccess('com.widevine.alpha', [{}])
+                    .then(() => {
+                        support.widevine = true;
+                        console.log('Widevine DRM: Supported');
+                    })
+                    .catch(() => {
+                        console.log('Widevine DRM: Not supported');
+                    });
+                
+                // Test PlayReady
+                navigator.requestMediaKeySystemAccess('com.microsoft.playready', [{}])
+                    .then(() => {
+                        support.playready = true;
+                        console.log('PlayReady DRM: Supported');
+                    })
+                    .catch(() => {
+                        console.log('PlayReady DRM: Not supported');
+                    });
+                
+                // Test ClearKey
+                navigator.requestMediaKeySystemAccess('org.w3.clearkey', [{}])
+                    .then(() => {
+                        support.clearkey = true;
+                        console.log('ClearKey DRM: Supported');
+                    })
+                    .catch(() => {
+                        console.log('ClearKey DRM: Not supported');
+                    });
+            } else {
+                console.log('EME (Encrypted Media Extensions) not supported');
+            }
+            
+            console.log('DRM Support Summary:', support);
+            return support;
+        };
+
+        console.log('MPD and DRM test functions loaded. Available functions:');
+        console.log('- testMPDPlayback(url): Test MPD playback');
+        console.log('- checkDashSupport(): Check DASH.js support');
+        console.log('- getPlayerState(): Get current player state');
+        console.log('- checkDRMSupport(): Check DRM system support');
+        console.log('- testMPDDRMConfig(mpdDrmConfig, mpdUrl): Test MPD DRM configuration');
         // --- End Test MPD Functionality ---
 
     </script>

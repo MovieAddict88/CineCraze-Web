@@ -1,0 +1,32 @@
+{
+  "Title": "One Sports",
+  "SubCategory": "Sports",
+  "Country": "🇵🇭 Philippines",
+  "Description": "Sports channel covering local and international games.",
+  "Poster": "https://i.imgur.com/iyBXXpU.png",
+  "Thumbnail": "https://i.imgur.com/iyBXXpU.png",
+  "Rating": 4.3,
+  "Duration": "24/7",
+  "Year": 2019,
+  "Servers": [
+    {
+      "name": "HD",
+      "url": "https://qp-pldt-live-grp-07-prod.akamaized.net/out/u/cg_onesports_hd.mpd"
+    }
+  ],
+  "mpdDrm": {
+    "widevine": {
+      "licenseUrl": "https://your-widevine-license-server.com/license",
+      "headers": {
+        "Authorization": "Bearer your-auth-token",
+        "X-Channel-ID": "onesports-hd"
+      }
+    },
+    "playready": {
+      "licenseUrl": "https://your-playready-license-server.com/license",
+      "headers": {
+        "Authorization": "Bearer your-auth-token"
+      }
+    }
+  }
+}
