@@ -3243,7 +3243,7 @@
                 description: content.Description,
                 poster: content.Poster || content.Thumbnail,
                 Servers: content.Servers,
-                drm: content.drm // Include DRM configuration if present
+                mpdDrm: content.mpdDrm // Include MPD DRM configuration if present
             };
 
             incrementViewCount(content.Title);
@@ -3570,18 +3570,18 @@
                     video: true
                 };
 
-                // Check for DRM configuration in the current content
-                let drmConfig = null;
-                if (currentContentInfo && currentContentInfo.drm) {
-                    drmConfig = currentContentInfo.drm;
-                    console.log('DRM configuration found:', drmConfig);
-                } else if (currentEpisode && currentEpisode.drm) {
-                    drmConfig = currentEpisode.drm;
-                    console.log('Episode DRM configuration found:', drmConfig);
-                } else if (currentSeries && currentSeries.drm) {
-                    drmConfig = currentSeries.drm;
-                    console.log('Series DRM configuration found:', drmConfig);
-                }
+                            // Check for DRM configuration specifically for MPD streams
+            let drmConfig = null;
+            if (currentContentInfo && currentContentInfo.mpdDrm) {
+                drmConfig = currentContentInfo.mpdDrm;
+                console.log('MPD DRM configuration found:', drmConfig);
+            } else if (currentEpisode && currentEpisode.mpdDrm) {
+                drmConfig = currentEpisode.mpdDrm;
+                console.log('Episode MPD DRM configuration found:', drmConfig);
+            } else if (currentSeries && currentSeries.mpdDrm) {
+                drmConfig = currentSeries.mpdDrm;
+                console.log('Series MPD DRM configuration found:', drmConfig);
+            }
 
                 // Configure DRM if available
                 if (drmConfig) {
@@ -4859,27 +4859,32 @@
                 isPlaying: playerInstance ? !playerInstance.paused : false,
                 hasError: elements.playerMessageArea ? elements.playerMessageArea.style.display !== 'none' : false,
                 errorMessage: elements.playerMessageArea ? elements.playerMessageArea.textContent : null,
-                drmConfig: currentContentInfo ? currentContentInfo.drm : null,
+                mpdDrmConfig: currentContentInfo ? currentContentInfo.mpdDrm : null,
                 currentContent: currentContentInfo ? currentContentInfo.title : null
             };
             console.log('Current player state:', state);
             return state;
         };
 
-        // Function to test DRM configuration
-        window.testDRMConfig = function(drmConfig, mpdUrl) {
+        // Function to test MPD DRM configuration
+        window.testMPDDRMConfig = function(mpdDrmConfig, mpdUrl) {
             if (!mpdUrl) {
                 console.error('MPD URL is required for DRM testing');
                 return;
             }
             
-            console.log('Testing DRM configuration:', drmConfig);
+            if (!isMPDUrl(mpdUrl)) {
+                console.error('Provided URL is not an MPD file. DRM is only for MPD streams.');
+                return;
+            }
+            
+            console.log('Testing MPD DRM configuration:', mpdDrmConfig);
             console.log('MPD URL:', mpdUrl);
             
-            // Temporarily set DRM config for testing
+            // Temporarily set MPD DRM config for testing
             if (currentContentInfo) {
-                currentContentInfo.drm = drmConfig;
-                console.log('DRM config set for testing. Now call playUrl() with the MPD URL.');
+                currentContentInfo.mpdDrm = mpdDrmConfig;
+                console.log('MPD DRM config set for testing. Now call playUrl() with the MPD URL.');
             } else {
                 console.error('No content loaded. Please load content first.');
             }
@@ -4937,7 +4942,7 @@
         console.log('- checkDashSupport(): Check DASH.js support');
         console.log('- getPlayerState(): Get current player state');
         console.log('- checkDRMSupport(): Check DRM system support');
-        console.log('- testDRMConfig(drmConfig, mpdUrl): Test DRM configuration');
+        console.log('- testMPDDRMConfig(mpdDrmConfig, mpdUrl): Test MPD DRM configuration');
         // --- End Test MPD Functionality ---
 
     </script>
