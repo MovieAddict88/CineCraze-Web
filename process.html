@@ -13,6 +13,7 @@
 <body>
     <h1>Pre-process TMDB Data</h1>
     <p>This script will fetch data from your JSON file, enrich it with data from TMDB, and then allow you to download the new, combined JSON file.</p>
+    <p><strong>Note:</strong> This processor now preserves MPD license data (mpdDrm field) and server configurations. It will maintain clearkey DRM information for MPD streams while enriching with TMDB metadata.</p>
     <input type="file" id="jsonFile" accept=".json">
     <button id="start">Start Processing</button>
     <div id="status"></div>
@@ -45,12 +46,91 @@
                     for (const entry of category.Entries) {
                         const type = category.MainCategory.toLowerCase().includes('movie') ? 'movie' : 'series';
                         const tmdbData = await fetchTmdbData(entry.Title, type);
+                        
+                        // Preserve existing license data and servers
+                        const preservedData = {
+                            mpdDrm: entry.mpdDrm,
+                            Servers: entry.Servers,
+                            Seasons: entry.Seasons
+                        };
+                        
+                        // Merge TMDB data while preserving license and server data
                         Object.assign(entry, tmdbData);
+                        
+                        // Restore preserved data (only if they existed)
+                        if (preservedData.mpdDrm) {
+                            entry.mpdDrm = preservedData.mpdDrm;
+                            console.log(`Preserved mpdDrm for ${entry.Title}:`, entry.mpdDrm);
+                        }
+                        if (preservedData.Servers) {
+                            entry.Servers = preservedData.Servers;
+                            // Log MPD servers for debugging
+                            const mpdServers = entry.Servers.filter(server => server.url.includes('.mpd'));
+                            if (mpdServers.length > 0) {
+                                console.log(`Found ${mpdServers.length} MPD server(s) for ${entry.Title}`);
+                            }
+                        }
+                        if (preservedData.Seasons) entry.Seasons = preservedData.Seasons;
+                        
+                        // Process seasons and episodes if they exist
+                        if (entry.Seasons) {
+                            for (const season of entry.Seasons) {
+                                if (season.Episodes) {
+                                    for (const episode of season.Episodes) {
+                                        // Preserve episode-level license data
+                                        const episodePreservedData = {
+                                            mpdDrm: episode.mpdDrm,
+                                            Servers: episode.Servers
+                                        };
+                                        
+                                        // Restore episode preserved data if they existed
+                                        if (episodePreservedData.mpdDrm) episode.mpdDrm = episodePreservedData.mpdDrm;
+                                        if (episodePreservedData.Servers) episode.Servers = episodePreservedData.Servers;
+                                    }
+                                }
+                            }
+                        }
+                        
                         statusEl.textContent += `\nProcessed: ${entry.Title}`;
                         await new Promise(resolve => setTimeout(resolve, 100)); // Rate limit to avoid overwhelming the API
                     }
                 }
 
+                // Validate preserved data
+                statusEl.textContent += '\n\nValidating processed data...';
+                let mpdWithLicenseCount = 0;
+                let totalMpdCount = 0;
+                
+                for (const category of cineData.Categories) {
+                    for (const entry of category.Entries) {
+                        if (entry.Servers) {
+                            const mpdServers = entry.Servers.filter(server => server.url.includes('.mpd'));
+                            totalMpdCount += mpdServers.length;
+                            if (mpdServers.length > 0 && entry.mpdDrm) {
+                                mpdWithLicenseCount++;
+                            }
+                        }
+                        
+                        // Check episodes too
+                        if (entry.Seasons) {
+                            for (const season of entry.Seasons) {
+                                if (season.Episodes) {
+                                    for (const episode of season.Episodes) {
+                                        if (episode.Servers) {
+                                            const episodeMpdServers = episode.Servers.filter(server => server.url.includes('.mpd'));
+                                            totalMpdCount += episodeMpdServers.length;
+                                            if (episodeMpdServers.length > 0 && episode.mpdDrm) {
+                                                mpdWithLicenseCount++;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                statusEl.textContent += `\nValidation complete: Found ${totalMpdCount} total MPD streams, ${mpdWithLicenseCount} with license data preserved.`;
                 statusEl.textContent += '\n\nProcessing complete!';
                 const enrichedJson = JSON.stringify(cineData, null, 2);
                 const base64Data = btoa(unescape(encodeURIComponent(enrichedJson)));

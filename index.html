@@ -3229,7 +3229,8 @@
                 currentSeries = content;
 
                 if (content.type !== 'series' && content.Servers) {
-                    updatePlayerSource(content.Servers);
+                    debugLicenseData(content.Title, content.mpdDrm, content.Servers);
+                    updatePlayerSource(content.Servers, content.mpdDrm);
                 }
                 elements.seasonsGrid.innerHTML = '';
 
@@ -3351,8 +3352,8 @@
             elements.dislikeBtn.addEventListener('click', handleDislike);
         }
         
-        // Play URL with YouTube and Vidsrc support
-        function playUrl(url) {
+        // Play URL with YouTube and Vidsrc support - enhanced with license support
+        function playUrl(url, mpdDrm = null) {
             if (!url || !playerInstance) return;
 
             const playerContainer = document.querySelector('.player-container');
@@ -3462,30 +3463,37 @@
                     return;
                 }
             }
-            // Check for MPD URL
-            if (url.includes('.mpd')) {
-                if (dashPlayer) {
-                    dashPlayer.reset();
-                }
-                dashPlayer = dashjs.MediaPlayer().create();
-
-                // Add more robust error handling
-                dashPlayer.on(dashjs.MediaPlayer.events.ERROR, (e) => {
-                    console.error('DASH Player Error:', e);
-                    if (e.error && e.error.code === 17) { // NETWORK_ERROR
-                        elements.playerMessageArea.textContent = 'Network error. Retrying...';
-                        elements.playerMessageArea.style.display = 'block';
-                        safeSetTimeout(() => dashPlayer.initialize(elements.player, url, true), 3000);
-                    } else if (e.error && e.error.message) {
-                        elements.playerMessageArea.textContent = `Error: ${e.error.message}`;
-                        elements.playerMessageArea.style.display = 'block';
-                    } else {
-                        elements.playerMessageArea.textContent = 'An unknown error occurred with the video stream.';
-                        elements.playerMessageHessageArea.style.display = 'block';
+            
+            // Check for MPD URL with license support
+            if (isMpdUrl(url)) {
+                if (mpdDrm) {
+                    // Use the dedicated MPD with license function
+                    playMpdWithLicense(url, mpdDrm);
+                } else {
+                    // Fallback to basic MPD playback without license
+                    if (dashPlayer) {
+                        dashPlayer.reset();
                     }
-                });
+                    dashPlayer = dashjs.MediaPlayer().create();
 
-                dashPlayer.initialize(elements.player, url, true);
+                    // Add more robust error handling
+                    dashPlayer.on(dashjs.MediaPlayer.events.ERROR, (e) => {
+                        console.error('DASH Player Error:', e);
+                        if (e.error && e.error.code === 17) { // NETWORK_ERROR
+                            elements.playerMessageArea.textContent = 'Network error. Retrying...';
+                            elements.playerMessageArea.style.display = 'block';
+                            safeSetTimeout(() => dashPlayer.initialize(elements.player, url, true), 3000);
+                        } else if (e.error && e.error.message) {
+                            elements.playerMessageArea.textContent = `Error: ${e.error.message}`;
+                            elements.playerMessageArea.style.display = 'block';
+                        } else {
+                            elements.playerMessageArea.textContent = 'An unknown error occurred with the video stream.';
+                            elements.playerMessageArea.style.display = 'block';
+                        }
+                    });
+
+                    dashPlayer.initialize(elements.player, url, true);
+                }
                 return;
             }
 
@@ -3529,6 +3537,44 @@
             return url.includes('drive.google.com') || url.includes('drive.usercontent.google.com');
         }
 
+        // Check if URL is MPD
+        function isMpdUrl(url) {
+            if (!url) return false;
+            return url.includes('.mpd');
+        }
+
+        // Debug function to log license data
+        function debugLicenseData(contentTitle, mpdDrm, servers) {
+            console.log(`=== License Debug for: ${contentTitle} ===`);
+            console.log('mpdDrm:', mpdDrm);
+            if (servers) {
+                const mpdServers = servers.filter(server => server.url.includes('.mpd'));
+                console.log(`MPD servers found: ${mpdServers.length}`);
+                mpdServers.forEach((server, index) => {
+                    console.log(`MPD Server ${index + 1}:`, server);
+                });
+            }
+            console.log('===========================================');
+        }
+
+        // Test function to validate license structure
+        function validateLicenseStructure(mpdDrm) {
+            if (!mpdDrm) return false;
+            
+            // Check for clearkey structure
+            if (mpdDrm.clearkey && mpdDrm.clearkey.keys) {
+                const keys = mpdDrm.clearkey.keys;
+                // Validate that keys is an object with at least one key-value pair
+                if (typeof keys === 'object' && Object.keys(keys).length > 0) {
+                    console.log('✅ Valid license structure detected');
+                    return true;
+                }
+            }
+            
+            console.log('❌ Invalid or missing license structure');
+            return false;
+        }
+
         // Extract YouTube ID
         function extractYouTubeId(url) {
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -3552,8 +3598,8 @@
             return id;
         }
         
-        // Update player source
-        function updatePlayerSource(servers) {
+        // Update player source with license support
+        function updatePlayerSource(servers, mpdDrm = null) {
             if (!playerInstance) return;
 
             if (servers && servers.length > 0) {
@@ -3561,8 +3607,24 @@
                 let hasSpecialSource = false;
 
                 for (const server of servers) {
-                    if (isVidsrcUrl(server.url) || isVidjoyUrl(server.url) || isMegaNzUrl(server.url) || isGoogleDriveUrl(server.url)) {
-                        playUrl(server.url);
+                    // Check for MPD links (with or without license)
+                    if (server.url.includes('.mpd')) {
+                        if (mpdDrm) {
+                            // Use dedicated MPD with license function
+                            if (playMpdWithLicense(server.url, mpdDrm)) {
+                                hasSpecialSource = true;
+                                break;
+                            }
+                        } else {
+                            // Regular MPD without license
+                            playUrl(server.url, null);
+                            hasSpecialSource = true;
+                            break;
+                        }
+                    }
+                    // Check for other special sources
+                    else if (isVidsrcUrl(server.url) || isVidjoyUrl(server.url) || isMegaNzUrl(server.url) || isGoogleDriveUrl(server.url)) {
+                        playUrl(server.url, null);
                         hasSpecialSource = true;
                         break;
                     }
@@ -3579,6 +3641,72 @@
                     };
                 }
             }
+        }
+
+        // Handle MPD with license data
+        function playMpdWithLicense(url, mpdDrm) {
+            if (!url.includes('.mpd') || !mpdDrm) {
+                return false; // Not an MPD with license, let other handlers deal with it
+            }
+
+            console.log('Playing MPD with license:', { url, mpdDrm });
+            
+            // Validate license structure
+            if (!validateLicenseStructure(mpdDrm)) {
+                console.warn('Invalid license structure, falling back to regular MPD playback');
+                return false;
+            }
+
+            if (dashPlayer) {
+                dashPlayer.reset();
+            }
+            dashPlayer = dashjs.MediaPlayer().create();
+
+            // Configure DRM if clearkey is provided
+            if (mpdDrm.clearkey && mpdDrm.clearkey.keys) {
+                const protectionData = {
+                    'org.w3.clearkey': {
+                        'clearkeys': mpdDrm.clearkey.keys
+                    }
+                };
+                console.log('Setting protection data:', protectionData);
+                dashPlayer.setProtectionData(protectionData);
+            }
+
+            // Add success handling
+            dashPlayer.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, () => {
+                console.log('MPD stream initialized successfully');
+                elements.playerMessageArea.style.display = 'none';
+            });
+
+            // Add error handling
+            dashPlayer.on(dashjs.MediaPlayer.events.ERROR, (e) => {
+                console.error('DASH Player Error:', e);
+                if (e.error && e.error.code === 17) { // NETWORK_ERROR
+                    elements.playerMessageArea.textContent = 'Network error. Retrying...';
+                    elements.playerMessageArea.style.display = 'block';
+                    safeSetTimeout(() => dashPlayer.initialize(elements.player, url, true), 3000);
+                } else if (e.error && e.error.message) {
+                    elements.playerMessageArea.textContent = `Error: ${e.error.message}`;
+                    elements.playerMessageArea.style.display = 'block';
+                } else {
+                    elements.playerMessageArea.textContent = 'An unknown error occurred with the video stream.';
+                    elements.playerMessageArea.style.display = 'block';
+                }
+            });
+
+            // Add key system access handling
+            dashPlayer.on(dashjs.MediaPlayer.events.KEY_SYSTEM_SELECTED, (e) => {
+                console.log('Key system selected:', e.data);
+            });
+
+            dashPlayer.on(dashjs.MediaPlayer.events.KEY_SESSION_CREATED, (e) => {
+                console.log('Key session created:', e.data);
+            });
+
+            // Initialize the player with the MPD URL
+            dashPlayer.initialize(elements.player, url, true);
+            return true; // Handled successfully
         }
         
         // Open season
@@ -3621,7 +3749,9 @@
 
             // Update quality selector
             if (episode.Servers) {
-                updatePlayerSource(episode.Servers);
+                const licenseDrm = episode.mpdDrm || currentSeries.mpdDrm;
+                debugLicenseData(`${currentSeries.Title} - Episode ${episode.Episode}`, licenseDrm, episode.Servers);
+                updatePlayerSource(episode.Servers, licenseDrm);
             }
 
             // Ensure the episode selector reflects the current episode
