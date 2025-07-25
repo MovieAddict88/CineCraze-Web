@@ -45,7 +45,41 @@
                     for (const entry of category.Entries) {
                         const type = category.MainCategory.toLowerCase().includes('movie') ? 'movie' : 'series';
                         const tmdbData = await fetchTmdbData(entry.Title, type);
+                        
+                        // Preserve existing license data and servers
+                        const preservedData = {
+                            mpdDrm: entry.mpdDrm,
+                            Servers: entry.Servers,
+                            Seasons: entry.Seasons
+                        };
+                        
+                        // Merge TMDB data while preserving license and server data
                         Object.assign(entry, tmdbData);
+                        
+                        // Restore preserved data (only if they existed)
+                        if (preservedData.mpdDrm) entry.mpdDrm = preservedData.mpdDrm;
+                        if (preservedData.Servers) entry.Servers = preservedData.Servers;
+                        if (preservedData.Seasons) entry.Seasons = preservedData.Seasons;
+                        
+                        // Process seasons and episodes if they exist
+                        if (entry.Seasons) {
+                            for (const season of entry.Seasons) {
+                                if (season.Episodes) {
+                                    for (const episode of season.Episodes) {
+                                        // Preserve episode-level license data
+                                        const episodePreservedData = {
+                                            mpdDrm: episode.mpdDrm,
+                                            Servers: episode.Servers
+                                        };
+                                        
+                                        // Restore episode preserved data if they existed
+                                        if (episodePreservedData.mpdDrm) episode.mpdDrm = episodePreservedData.mpdDrm;
+                                        if (episodePreservedData.Servers) episode.Servers = episodePreservedData.Servers;
+                                    }
+                                }
+                            }
+                        }
+                        
                         statusEl.textContent += `\nProcessed: ${entry.Title}`;
                         await new Promise(resolve => setTimeout(resolve, 100)); // Rate limit to avoid overwhelming the API
                     }
