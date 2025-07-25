@@ -13,6 +13,7 @@
 <body>
     <h1>Pre-process TMDB Data</h1>
     <p>This script will fetch data from your JSON file, enrich it with data from TMDB, and then allow you to download the new, combined JSON file.</p>
+    <p><strong>✅ DRM Support:</strong> This processor now supports JSON files with DRM configuration (mpdDrm fields) and will preserve all DRM settings during processing.</p>
     <input type="file" id="jsonFile" accept=".json">
     <button id="start">Start Processing</button>
     <div id="status"></div>
@@ -37,31 +38,112 @@
 
             try {
                 const file = jsonFileInput.files[0];
-                const cineData = JSON.parse(await file.text());
-
-                statusEl.textContent = 'Enriching data with TMDB...';
-
-                for (const category of cineData.Categories) {
-                    for (const entry of category.Entries) {
-                        const type = category.MainCategory.toLowerCase().includes('movie') ? 'movie' : 'series';
-                        const tmdbData = await fetchTmdbData(entry.Title, type);
-                        Object.assign(entry, tmdbData);
-                        statusEl.textContent += `\nProcessed: ${entry.Title}`;
-                        await new Promise(resolve => setTimeout(resolve, 100)); // Rate limit to avoid overwhelming the API
-                    }
+                let cineData;
+                
+                try {
+                    cineData = JSON.parse(await file.text());
+                } catch (parseError) {
+                    throw new Error(`Invalid JSON file: ${parseError.message}`);
                 }
 
-                statusEl.textContent += '\n\nProcessing complete!';
+                statusEl.textContent = 'Analyzing JSON structure...\n';
+                
+                let processedCount = 0;
+
+                // Handle different JSON structures
+                if (cineData.Categories && Array.isArray(cineData.Categories)) {
+                    // Standard Categories structure
+                    statusEl.textContent += `Found ${cineData.Categories.length} categories\n`;
+                    for (const category of cineData.Categories) {
+                        if (category.Entries && Array.isArray(category.Entries)) {
+                            statusEl.textContent += `Processing ${category.Entries.length} entries in ${category.MainCategory || 'Unknown Category'}\n`;
+                            for (const entry of category.Entries) {
+                                await processEntry(entry, category.MainCategory || 'Unknown');
+                                processedCount++;
+                            }
+                        }
+                    }
+                } else if (cineData.Title) {
+                    // Single entry structure (like one_sports_with_clearkey_drm.json)
+                    statusEl.textContent += 'Processing single entry\n';
+                    await processEntry(cineData, 'Unknown');
+                    processedCount = 1;
+                } else if (Array.isArray(cineData)) {
+                    // Array of entries
+                    statusEl.textContent += `Processing ${cineData.length} entries from array\n`;
+                    for (const entry of cineData) {
+                        await processEntry(entry, 'Unknown');
+                        processedCount++;
+                    }
+                } else {
+                    throw new Error('Unrecognized JSON structure. Expected Categories array, single entry object, or array of entries.');
+                }
+                
+                statusEl.textContent += `\n✅ Processing complete! Enriched ${processedCount} entries.`;
                 const enrichedJson = JSON.stringify(cineData, null, 2);
-                const base64Data = btoa(unescape(encodeURIComponent(enrichedJson)));
-                const blob = new Blob([base64Data], { type: 'text/plain' });
+                const blob = new Blob([enrichedJson], { type: 'application/json' });
                 downloadEl.href = URL.createObjectURL(blob);
                 downloadEl.style.display = 'block';
 
             } catch (error) {
                 statusEl.textContent = `Error: ${error.message}`;
+            } finally {
+                startBtn.disabled = false;
             }
         });
+
+        async function processEntry(entry, categoryType) {
+            if (!entry.Title) {
+                statusEl.textContent += `\nSkipping entry without title`;
+                return;
+            }
+
+            const type = categoryType.toLowerCase().includes('movie') ? 'movie' : 
+                        categoryType.toLowerCase().includes('series') || entry.Type === 'Series' || entry.Seasons ? 'series' : 
+                        'movie'; // Default to movie for live TV and unknown types
+            
+            statusEl.textContent += `\nProcessing: ${entry.Title} (${type})`;
+            
+            try {
+                const tmdbData = await fetchTmdbData(entry.Title, type);
+                
+                // Preserve existing fields and add TMDB data, but don't overwrite existing values
+                const enrichedEntry = {
+                    ...entry,
+                    Description: entry.Description || tmdbData.Description || '',
+                    Year: entry.Year || tmdbData.Year || '',
+                    Rating: entry.Rating || tmdbData.Rating || 'N/A',
+                    Poster: entry.Poster || tmdbData.Poster || '',
+                    Thumbnail: entry.Thumbnail || tmdbData.Thumbnail || ''
+                };
+                
+                // Copy all enriched properties back to original entry, preserving DRM and other special fields
+                Object.assign(entry, enrichedEntry);
+                
+                // If this is a series with seasons, process episodes recursively
+                if (entry.Seasons && Array.isArray(entry.Seasons)) {
+                    for (const season of entry.Seasons) {
+                        if (season.Episodes && Array.isArray(season.Episodes)) {
+                            for (const episode of season.Episodes) {
+                                if (episode.Title) {
+                                    statusEl.textContent += `\n  Processing episode: ${episode.Title}`;
+                                    const episodeTmdbData = await fetchTmdbData(`${entry.Title} ${episode.Title}`, 'tv');
+                                    // Only add description if episode doesn't have one
+                                    if (!episode.Description && episodeTmdbData.Description) {
+                                        episode.Description = episodeTmdbData.Description;
+                                    }
+                                    await new Promise(resolve => setTimeout(resolve, 50)); // Shorter delay for episodes
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 100)); // Rate limit to avoid overwhelming the API
+            } catch (error) {
+                statusEl.textContent += `\nError processing ${entry.Title}: ${error.message}`;
+            }
+        }
 
         async function fetchTmdbData(title, type) {
             const searchType = type === 'series' ? 'tv' : 'movie';
