@@ -1,0 +1,128 @@
+{
+  "Categories": [
+    {
+      "MainCategory": "Live TV",
+      "Entries": [
+        {
+          "Title": "Sample Sports Channel",
+          "SubCategory": "Sports",
+          "Country": "🇵🇭 Philippines",
+          "Description": "Example sports channel with DRM protection.",
+          "Poster": "https://example.com/sports-poster.png",
+          "Thumbnail": "https://example.com/sports-thumb.png",
+          "Rating": 4.5,
+          "Duration": "24/7",
+          "Year": 2023,
+          "Servers": [
+            {
+              "name": "HD",
+              "url": "https://example.com/sports-hd.mpd"
+            }
+          ],
+          "mpdDrm": {
+            "clearkey": {
+              "keys": {
+                "your-key-id-here": "your-key-value-here"
+              }
+            }
+          }
+        },
+        {
+          "Title": "Mixed Quality Channel",
+          "SubCategory": "Entertainment",
+          "Country": "🇵🇭 Philippines",
+          "Description": "Example channel with mixed server types - only MPD uses DRM.",
+          "Poster": "https://example.com/mixed-poster.png",
+          "Thumbnail": "https://example.com/mixed-thumb.png",
+          "Rating": 4.2,
+          "Duration": "24/7",
+          "Year": 2023,
+          "Servers": [
+            {
+              "name": "1080p",
+              "url": "https://example.com/channel.mpd"
+            },
+            {
+              "name": "720p",
+              "url": "https://example.com/channel_720.m3u8"
+            },
+            {
+              "name": "480p",
+              "url": "https://example.com/channel_480.m3u8"
+            }
+          ],
+          "mpdDrm": {
+            "widevine": {
+              "licenseUrl": "https://your-widevine-server.com/license",
+              "headers": {
+                "Authorization": "Bearer your-token"
+              }
+            },
+            "playready": {
+              "licenseUrl": "https://your-playready-server.com/license"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "MainCategory": "TV Series",
+      "Entries": [
+        {
+          "Title": "Sample DRM Series",
+          "Description": "Example TV series with DRM protection",
+          "Type": "Series",
+          "Poster": "https://example.com/series-poster.jpg",
+          "Year": "2023",
+          "Rating": "8.5",
+          "Country": "USA",
+          "SubCategory": "Drama",
+          "mpdDrm": {
+            "clearkey": {
+              "keys": {
+                "series-key-id": "series-key-value"
+              }
+            }
+          },
+          "Seasons": [
+            {
+              "Season": 1,
+              "SeasonPoster": "https://example.com/season1.jpg",
+              "Episodes": [
+                {
+                  "Episode": 1,
+                  "Title": "Episode 1",
+                  "Description": "First episode with DRM",
+                  "Servers": [
+                    {
+                      "name": "1080p",
+                      "url": "https://example.com/s1e1.mpd"
+                    }
+                  ]
+                },
+                {
+                  "Episode": 2,
+                  "Title": "Special Episode",
+                  "Description": "Episode with custom DRM settings",
+                  "Servers": [
+                    {
+                      "name": "1080p",
+                      "url": "https://example.com/s1e2.mpd"
+                    }
+                  ],
+                  "mpdDrm": {
+                    "clearkey": {
+                      "keys": {
+                        "special-episode-key-id": "special-episode-key-value"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
