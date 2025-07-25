@@ -13,6 +13,8 @@
 <body>
     <h1>Pre-process TMDB Data</h1>
     <p>This script will fetch data from your JSON file, enrich it with data from TMDB, and then allow you to download the new, combined JSON file.</p>
+    <p><strong>✅ DRM Support:</strong> This processor supports JSON files with DRM configuration (mpdDrm fields) and will preserve all DRM settings during processing.</p>
+    <p><strong>ℹ️ Important:</strong> DRM configuration (mpdDrm) should only be used with MPD (.mpd) stream URLs. The processor will validate this and warn about any misconfigurations.</p>
     <input type="file" id="jsonFile" accept=".json">
     <button id="start">Start Processing</button>
     <div id="status"></div>
@@ -37,31 +39,121 @@
 
             try {
                 const file = jsonFileInput.files[0];
-                const cineData = JSON.parse(await file.text());
-
-                statusEl.textContent = 'Enriching data with TMDB...';
-
-                for (const category of cineData.Categories) {
-                    for (const entry of category.Entries) {
-                        const type = category.MainCategory.toLowerCase().includes('movie') ? 'movie' : 'series';
-                        const tmdbData = await fetchTmdbData(entry.Title, type);
-                        Object.assign(entry, tmdbData);
-                        statusEl.textContent += `\nProcessed: ${entry.Title}`;
-                        await new Promise(resolve => setTimeout(resolve, 100)); // Rate limit to avoid overwhelming the API
-                    }
+                let cineData;
+                
+                try {
+                    cineData = JSON.parse(await file.text());
+                } catch (parseError) {
+                    throw new Error(`Invalid JSON file: ${parseError.message}`);
                 }
 
-                statusEl.textContent += '\n\nProcessing complete!';
+                statusEl.textContent = 'Analyzing JSON structure...\n';
+                
+                let processedCount = 0;
+
+                // Handle different JSON structures
+                if (cineData.Categories && Array.isArray(cineData.Categories)) {
+                    // Standard Categories structure
+                    statusEl.textContent += `Found ${cineData.Categories.length} categories\n`;
+                    for (const category of cineData.Categories) {
+                        if (category.Entries && Array.isArray(category.Entries)) {
+                            statusEl.textContent += `Processing ${category.Entries.length} entries in ${category.MainCategory || 'Unknown Category'}\n`;
+                            for (const entry of category.Entries) {
+                                await processEntry(entry, category.MainCategory || 'Unknown');
+                                processedCount++;
+                            }
+                        }
+                    }
+                } else if (cineData.Title) {
+                    // Single entry structure (like one_sports_with_clearkey_drm.json)
+                    statusEl.textContent += 'Processing single entry\n';
+                    await processEntry(cineData, 'Unknown');
+                    processedCount = 1;
+                } else if (Array.isArray(cineData)) {
+                    // Array of entries
+                    statusEl.textContent += `Processing ${cineData.length} entries from array\n`;
+                    for (const entry of cineData) {
+                        await processEntry(entry, 'Unknown');
+                        processedCount++;
+                    }
+                } else {
+                    throw new Error('Unrecognized JSON structure. Expected Categories array, single entry object, or array of entries.');
+                }
+                
+                statusEl.textContent += `\n✅ Processing complete! Enriched ${processedCount} entries.`;
                 const enrichedJson = JSON.stringify(cineData, null, 2);
-                const base64Data = btoa(unescape(encodeURIComponent(enrichedJson)));
-                const blob = new Blob([base64Data], { type: 'text/plain' });
+                const blob = new Blob([enrichedJson], { type: 'application/json' });
                 downloadEl.href = URL.createObjectURL(blob);
                 downloadEl.style.display = 'block';
 
             } catch (error) {
                 statusEl.textContent = `Error: ${error.message}`;
+            } finally {
+                startBtn.disabled = false;
             }
         });
+
+        async function processEntry(entry, categoryType) {
+            if (!entry.Title) {
+                statusEl.textContent += `\nSkipping entry without title`;
+                return;
+            }
+
+            const type = categoryType.toLowerCase().includes('movie') ? 'movie' : 
+                        categoryType.toLowerCase().includes('series') || entry.Type === 'Series' || entry.Seasons ? 'series' : 
+                        'movie'; // Default to movie for live TV and unknown types
+            
+            statusEl.textContent += `\nProcessing: ${entry.Title} (${type})`;
+            
+            try {
+                const tmdbData = await fetchTmdbData(entry.Title, type);
+                
+                // Preserve existing fields and add TMDB data, but don't overwrite existing values
+                const enrichedEntry = {
+                    ...entry,
+                    Description: entry.Description || tmdbData.Description || '',
+                    Year: entry.Year || tmdbData.Year || '',
+                    Rating: entry.Rating || tmdbData.Rating || 'N/A',
+                    Poster: entry.Poster || tmdbData.Poster || '',
+                    Thumbnail: entry.Thumbnail || tmdbData.Thumbnail || ''
+                };
+                
+                // Copy all enriched properties back to original entry, preserving DRM and other special fields
+                Object.assign(entry, enrichedEntry);
+                
+                // Validate DRM configuration - DRM should only be used with MPD links
+                validateDrmConfiguration(entry);
+                
+                // If this is a series with seasons, process episodes recursively
+                if (entry.Seasons && Array.isArray(entry.Seasons)) {
+                    for (const season of entry.Seasons) {
+                        if (season.Episodes && Array.isArray(season.Episodes)) {
+                            for (const episode of season.Episodes) {
+                                if (episode.Title) {
+                                    statusEl.textContent += `\n  Processing episode: ${episode.Title}`;
+                                    const episodeTmdbData = await fetchTmdbData(`${entry.Title} ${episode.Title}`, 'tv');
+                                    // Only add description if episode doesn't have one
+                                    if (!episode.Description && episodeTmdbData.Description) {
+                                        episode.Description = episodeTmdbData.Description;
+                                    }
+                                    
+                                    // Validate episode-level DRM configuration
+                                    if (episode.mpdDrm) {
+                                        validateEpisodeDrmConfiguration(episode);
+                                    }
+                                    
+                                    await new Promise(resolve => setTimeout(resolve, 50)); // Shorter delay for episodes
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 100)); // Rate limit to avoid overwhelming the API
+            } catch (error) {
+                statusEl.textContent += `\nError processing ${entry.Title}: ${error.message}`;
+            }
+        }
 
         async function fetchTmdbData(title, type) {
             const searchType = type === 'series' ? 'tv' : 'movie';
@@ -69,21 +161,101 @@
 
             try {
                 const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`TMDB API error: ${response.status} ${response.statusText}`);
+                }
+                
                 const data = await response.json();
                 if (data.results && data.results.length > 0) {
                     const item = data.results[0];
                     return {
-                        Description: item.overview,
+                        Description: item.overview || '',
                         Year: type === 'series' ? (item.first_air_date ? item.first_air_date.split('-')[0] : '') : (item.release_date ? item.release_date.split('-')[0] : ''),
                         Rating: item.vote_average ? item.vote_average.toFixed(1) : 'N/A',
                         Poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : '',
                         Thumbnail: item.backdrop_path ? `https://image.tmdb.org/t/p/w500${item.backdrop_path}` : '',
                     };
+                } else {
+                    console.log(`No TMDB results found for: ${title}`);
                 }
             } catch (error) {
                 console.error(`Failed to fetch TMDB data for ${title}:`, error);
+                // Don't throw error, just log it and continue processing
             }
             return {};
+        }
+
+        function validateDrmConfiguration(entry) {
+            if (!entry.mpdDrm) return; // No DRM config, nothing to validate
+            
+            let hasMpdUrls = false;
+            let hasNonMpdUrls = false;
+            
+            // Check servers at entry level
+            if (entry.Servers && Array.isArray(entry.Servers)) {
+                for (const server of entry.Servers) {
+                    if (server.url) {
+                        if (server.url.toLowerCase().includes('.mpd')) {
+                            hasMpdUrls = true;
+                        } else {
+                            hasNonMpdUrls = true;
+                        }
+                    }
+                }
+            }
+            
+            // Check episodes for series
+            if (entry.Seasons && Array.isArray(entry.Seasons)) {
+                for (const season of entry.Seasons) {
+                    if (season.Episodes && Array.isArray(season.Episodes)) {
+                        for (const episode of season.Episodes) {
+                            if (episode.Servers && Array.isArray(episode.Servers)) {
+                                for (const server of episode.Servers) {
+                                    if (server.url) {
+                                        if (server.url.toLowerCase().includes('.mpd')) {
+                                            hasMpdUrls = true;
+                                        } else {
+                                            hasNonMpdUrls = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Report validation results
+            if (!hasMpdUrls && entry.mpdDrm) {
+                statusEl.textContent += `\n  ⚠️ Warning: ${entry.Title} has DRM config but no MPD URLs found`;
+            }
+            
+            if (hasMpdUrls && hasNonMpdUrls) {
+                statusEl.textContent += `\n  ℹ️ Info: ${entry.Title} has mixed URL types - DRM will only apply to MPD streams`;
+            }
+            
+            if (hasMpdUrls && entry.mpdDrm) {
+                statusEl.textContent += `\n  ✅ DRM: ${entry.Title} has valid MPD+DRM configuration`;
+            }
+        }
+
+        function validateEpisodeDrmConfiguration(episode) {
+            let hasEpisodeMpdUrls = false;
+            
+            if (episode.Servers && Array.isArray(episode.Servers)) {
+                for (const server of episode.Servers) {
+                    if (server.url && server.url.toLowerCase().includes('.mpd')) {
+                        hasEpisodeMpdUrls = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!hasEpisodeMpdUrls && episode.mpdDrm) {
+                statusEl.textContent += `\n    ⚠️ Warning: Episode "${episode.Title}" has DRM config but no MPD URLs`;
+            } else if (hasEpisodeMpdUrls && episode.mpdDrm) {
+                statusEl.textContent += `\n    ✅ Episode DRM: "${episode.Title}" has valid MPD+DRM configuration`;
+            }
         }
     </script>
 </body>
