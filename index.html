@@ -2462,7 +2462,6 @@
         const ITEMS_PER_PAGE = 20;
         const LAZY_LOAD_THRESHOLD = 100; // px from bottom to trigger load
         const PLACEHOLDER_IMAGE_URL = 'https://movie-fcs.fwh.is/cinecraze/cinecraze.png';
-        const TMDB_API_KEY = '871c8ec045dba340e55b032a0546948c';
         
         // SAMPLE DATA - Replace this with your actual data source
         let cineData = null;
@@ -2683,51 +2682,91 @@
             try {
                 elements.loadingSpinner.style.display = 'block';
 
-                const response = await fetch("https://raw.githubusercontent.com/MovieAddict88/Movie-Source/main/data.json"); // Changed to local file
+                const response = await fetch("https://movie-fcs.fwh.is/cinecraze/pagsure.json");
                 if (!response.ok) throw new Error("Online source failed");
 
-                const base64Data = await response.text();
-                // Use modern TextDecoder instead of deprecated escape() function
-                const binaryString = atob(base64Data);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                const decodedData = new TextDecoder('utf-8').decode(bytes);
-                cineData = JSON.parse(decodedData);
-                console.log("✅ Loaded from LOCAL source");
+                cineData = await response.json();
+                console.log("✅ Loaded from ONLINE source");
 
+                // Fix data inconsistencies
+                fixDataInconsistencies();
             } catch (err) {
-                console.error("❌ Both online and offline data failed to load.", err);
-                alert("Data loading failed. Please check your internet or local file.");
+                console.warn("⚠️ Online source failed, trying offline...", err);
+
+                try {
+                    const offlineResponse = await fetch("./pagsure.json");
+                    if (!offlineResponse.ok) throw new Error("Offline file not found");
+
+                    cineData = await offlineResponse.json();
+                    console.log("✅ Loaded from OFFLINE file");
+
+                    // Fix data inconsistencies
+                    fixDataInconsistencies();
+                } catch (err2) {
+                    console.error("❌ Both online and offline data failed to load.", err2);
+                    alert("Data loading failed. Please check your internet or local file.");
+                }
             } finally {
                 elements.loadingSpinner.style.display = 'none';
             }
         }
         
-        // Fetches data from TMDB
-        async function fetchTmdbData(title, type) {
-            const searchType = type === 'series' ? 'tv' : 'movie';
-            const url = `https://api.themoviedb.org/3/search/${searchType}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`;
+        // Fix data inconsistencies
+        function fixDataInconsistencies() {
+            if (!cineData || !cineData.Categories) return;
 
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                if (data.results && data.results.length > 0) {
-                    const item = data.results[0];
-                    return {
-                        Description: item.overview,
-                        Year: type === 'series' ? (item.first_air_date ? item.first_air_date.split('-')[0] : '') : (item.release_date ? item.release_date.split('-')[0] : ''),
-                        Rating: item.vote_average ? item.vote_average.toFixed(1) : 'N/A',
-                        Poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : PLACEHOLDER_IMAGE_URL,
-                        Thumbnail: item.backdrop_path ? `https://image.tmdb.org/t/p/w500${item.backdrop_path}` : PLACEHOLDER_IMAGE_URL,
-                    };
-                }
-            } catch (error) {
-                console.error(`Failed to fetch TMDB data for ${title}:`, error);
-            }
-            return {};
+            // Fix Naruto Kid inconsistencies
+            cineData.Categories.forEach(category => {
+                category.Entries = category.Entries.map(entry => {
+                    // Fix trailing dash in title
+                    if (entry.Title && entry.Title.endsWith(' -')) {
+                        entry.Title = entry.Title.slice(0, -1).trim();
+                    }
+
+                    // Fix Naruto Kid specific issues
+                    if (entry.Title === "Naruto Kid") {
+                        // Fix rating inconsistency
+                        if (!entry.Rating) entry.Rating = "8.5";
+
+                        // Fix country inconsistency
+                        if (!entry.Country) entry.Country = "Japan";
+
+                        // Fix description consistency
+                        entry.Description = "An anime series in Tagalog Dub";
+
+                        // Fix content type
+                        entry.type = "series";
+
+                        // Add season data if missing
+                        if (!entry.Seasons) {
+                            entry.Seasons = [{
+                                Season: 1,
+                                SeasonPoster: entry.Poster,
+                                Episodes: [
+                                    {
+                                        Episode: 1,
+                                        Title: "The Beginning",
+                                        Description: "The start of Naruto's journey",
+                                        Servers: [
+                                            { name: "480p", url: "https://example.com/naruto-ep1-480p" }
+                                        ]
+                                    }
+                                ]
+                            }];
+                        }
+                    }
+
+                    // Fix other inconsistencies as needed
+                    if (entry.Title === "Boruto: Naruto Next Generations") {
+                        entry.Description = "The next generation of ninja adventures in the Hidden Leaf Village under the leadership of the Seventh Hokage Naruto Uzumaki.";
+                    }
+
+                    return entry;
+                });
+            });
         }
+        
+
 
         // No longer needed, data is pre-enriched
         // async function fixDataInconsistencies() { ... }
