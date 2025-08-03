@@ -1,0 +1,59 @@
+{
+  "Categories": [
+    {
+      "Category": "Movies",
+      "Entries": [
+        {
+          "Title": "Sample Movie",
+          "Description": "A sample movie for testing",
+          "Year": "2023",
+          "Rating": "8.5",
+          "Country": "USA",
+          "Poster": "https://movie-fcs.fwh.is/cinecraze/cinecraze.png",
+          "Thumbnail": "https://movie-fcs.fwh.is/cinecraze/cinecraze.png",
+          "type": "movie",
+          "Servers": [
+            {
+              "name": "Server 1",
+              "url": "https://example.com/movie1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Category": "TV Series",
+      "Entries": [
+        {
+          "Title": "Sample Series",
+          "Description": "A sample TV series for testing",
+          "Year": "2023",
+          "Rating": "9.0",
+          "Country": "USA",
+          "Poster": "https://movie-fcs.fwh.is/cinecraze/cinecraze.png",
+          "Thumbnail": "https://movie-fcs.fwh.is/cinecraze/cinecraze.png",
+          "type": "series",
+          "Seasons": [
+            {
+              "Season": 1,
+              "SeasonPoster": "https://movie-fcs.fwh.is/cinecraze/cinecraze.png",
+              "Episodes": [
+                {
+                  "Episode": 1,
+                  "Title": "Pilot",
+                  "Description": "The first episode",
+                  "Servers": [
+                    {
+                      "name": "Server 1",
+                      "url": "https://example.com/series1-ep1"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
